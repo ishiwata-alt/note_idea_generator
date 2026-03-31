@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>note記事アイデアジェネレーター</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; font-feature-settings: "liga" 0, "clig" 0; }
+
+  body {
+    font-family: 'Zen Maru Gothic', 'Noto Sans JP', sans-serif;
+    background: linear-gradient(135deg, #fff0f5 0%, #fce4ec 50%, #f8bbd0 100%);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+    color: #5d4037;
+  }
+
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* ── Header ── */
+  header { text-align: center; margin-bottom: 32px; }
+  header .icon { font-size: 48px; margin-bottom: 8px; }
+  header h1 { font-size: 22px; font-weight: 700; color: #ad1457; letter-spacing: .5px; }
+  header p { font-size: 13px; color: #b76e79; margin-top: 6px; }
+
+  /* ── Card ── */
+  .card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 28px 24px;
+    box-shadow: 0 4px 24px rgba(173, 20, 87, .08);
+    margin-bottom: 24px;
+  }
+
+  /* ── Form ── */
+  label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 6px; color: #ad1457; }
+  label .sub { font-weight: 400; font-size: 12px; color: #b76e79; }
+
+  input[type="text"] {
+    width: 100%; padding: 12px 16px; border: 2px solid #f8bbd0; border-radius: 12px;
+    font-size: 15px; font-family: inherit; outline: none; transition: border-color .2s; background: #fffafa;
+  }
+  input[type="text"]:focus { border-color: #ec407a; }
+  input[type="text"]::placeholder { color: #e0a0b0; }
+  .field { margin-bottom: 20px; }
+
+  /* ── Radio / Toggle buttons ── */
+  .radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .radio-group input[type="radio"] { display: none; }
+  .radio-group label.radio {
+    display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px;
+    border: 2px solid #f8bbd0; border-radius: 40px; font-size: 14px; font-weight: 500;
+    color: #ad1457; cursor: pointer; transition: all .2s; background: #fffafa; user-select: none;
+  }
+  .radio-group label.radio:hover { background: #fce4ec; }
+  .radio-group input[type="radio"]:checked + label.radio {
+    background: linear-gradient(135deg, #f48fb1, #ec407a); color: #fff;
+    border-color: transparent; box-shadow: 0 2px 12px rgba(236, 64, 122, .3);
+  }
+
+  /* ── Mode toggle ── */
+  .mode-toggle {
+    display: flex; gap: 0; margin-bottom: 20px; border-radius: 14px; overflow: hidden;
+    border: 2px solid #f48fb1; background: #fff;
+  }
+  .mode-toggle button {
+    flex: 1; padding: 12px 8px; border: none; border-radius: 0; font-family: inherit;
+    font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s;
+    background: #fff; color: #ad1457; box-shadow: none; letter-spacing: 0;
+  }
+  .mode-toggle button:hover { background: #fce4ec; transform: none; box-shadow: none; }
+  .mode-toggle button.active {
+    background: linear-gradient(135deg, #f48fb1, #ec407a); color: #fff;
+  }
+
+  /* ── Button ── */
+  .btn-wrap { text-align: center; margin-top: 8px; }
+  button {
+    font-family: inherit; font-size: 16px; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, #f06292, #ec407a); border: none; border-radius: 40px;
+    padding: 14px 48px; cursor: pointer; transition: transform .15s, box-shadow .2s;
+    box-shadow: 0 4px 16px rgba(236, 64, 122, .3); letter-spacing: .5px;
+  }
+  button:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(236, 64, 122, .4); }
+  button:active { transform: translateY(0); }
+  button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+  button.btn-sm { font-size: 13px; padding: 8px 20px; border-radius: 30px; box-shadow: 0 2px 8px rgba(236, 64, 122, .2); }
+  button.btn-outline { background: #fff; color: #ec407a; border: 2px solid #f48fb1; box-shadow: none; }
+  button.btn-outline:hover { background: #fce4ec; box-shadow: none; }
+
+  /* ── Loading ── */
+  .loading { text-align: center; padding: 40px 0; display: none; }
+  .loading.show { display: block; }
+  .dots span {
+    display: inline-block; width: 10px; height: 10px; margin: 0 4px;
+    background: #f06292; border-radius: 50%; animation: bounce .6s infinite alternate;
+  }
+  .dots span:nth-child(2) { animation-delay: .2s; }
+  .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce { to { transform: translateY(-12px); opacity: .4; } }
+  .loading p { margin-top: 12px; font-size: 13px; color: #b76e79; }
+
+  /* ── Results ── */
+  #results, #seriesResults, #seriesArticleView { display: none; }
+  #seriesArticleView.show { display: block; }
+  #results.show, #seriesResults.show { display: block; }
+
+  .result-header { text-align: center; margin-bottom: 20px; }
+  .result-header h2 { font-size: 18px; color: #ad1457; }
+  .result-header p { font-size: 13px; color: #b76e79; margin-top: 4px; }
+
+  .article-card {
+    background: #fff; border-radius: 16px; padding: 22px 20px; margin-bottom: 16px;
+    box-shadow: 0 2px 16px rgba(173, 20, 87, .06); border-left: 4px solid #f48fb1;
+    transition: transform .15s;
+  }
+  .article-card:hover { transform: translateY(-2px); }
+  .article-card .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .article-card .num {
+    display: inline-block; background: linear-gradient(135deg, #f48fb1, #ec407a);
+    color: #fff; font-size: 12px; font-weight: 700; width: 24px; height: 24px;
+    line-height: 24px; text-align: center; border-radius: 50%; flex-shrink: 0;
+  }
+  .article-card h3 { font-size: 16px; font-weight: 700; color: #880e4f; margin-bottom: 12px; line-height: 1.5; }
+  .article-card ul { list-style: none; padding: 0; }
+  .article-card li {
+    position: relative; padding: 6px 0 6px 20px; font-size: 14px; line-height: 1.6; color: #5d4037;
+  }
+  .article-card li::before {
+    content: ''; position: absolute; left: 0; top: 13px;
+    width: 8px; height: 8px; background: #f8bbd0; border-radius: 50%;
+  }
+  .article-card .write-btn-wrap { text-align: right; margin-top: 12px; }
+  .btn-wrap.retry { margin-top: 24px; }
+
+  /* ── Article view ── */
+  #articleView { display: none; }
+  #articleView.show { display: block; }
+
+  .article-view-card {
+    background: #fff; border-radius: 20px; padding: 32px 24px;
+    box-shadow: 0 4px 24px rgba(173, 20, 87, .08); margin-bottom: 24px;
+  }
+  .article-view-card h2 {
+    font-size: 20px; font-weight: 700; color: #880e4f; line-height: 1.6;
+    margin-bottom: 24px; text-align: center; padding-bottom: 16px; border-bottom: 2px dashed #f8bbd0;
+  }
+  .article-section { margin-bottom: 28px; }
+  .article-section h3 {
+    font-size: 16px; font-weight: 700; color: #ad1457; margin-bottom: 12px;
+    padding-left: 14px; border-left: 4px solid #f48fb1; line-height: 1.5;
+  }
+  .article-section .body-text { font-size: 15px; line-height: 2; color: #5d4037; white-space: pre-wrap; }
+
+  .paywall-divider {
+    text-align: center; margin: 32px 0; padding: 20px;
+    background: linear-gradient(135deg, #fce4ec, #fff0f5); border-radius: 16px; border: 2px dashed #f48fb1;
+  }
+  .paywall-divider .lock { font-size: 32px; margin-bottom: 8px; }
+  .paywall-divider p { font-size: 14px; font-weight: 700; color: #ad1457; }
+  .paywall-divider .note { font-size: 12px; font-weight: 400; color: #b76e79; margin-top: 4px; }
+
+  .article-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
+
+  .copy-toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #ad1457; color: #fff; padding: 12px 28px; border-radius: 40px;
+    font-size: 14px; font-weight: 700; opacity: 0; transition: all .3s; pointer-events: none; z-index: 100;
+  }
+  .copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Series mode styles ── */
+  .series-magazine {
+    background: linear-gradient(135deg, #fce4ec, #fff0f5); border-radius: 20px;
+    padding: 24px 20px; margin-bottom: 24px; text-align: center;
+    border: 2px solid #f48fb1;
+  }
+  .series-magazine .mag-icon { font-size: 36px; margin-bottom: 8px; }
+  .series-magazine h2 { font-size: 18px; color: #880e4f; margin-bottom: 8px; line-height: 1.5; }
+  .series-magazine .mag-desc { font-size: 14px; color: #5d4037; line-height: 1.8; }
+
+  .series-card {
+    background: #fff; border-radius: 16px; padding: 22px 20px; margin-bottom: 16px;
+    box-shadow: 0 2px 16px rgba(173, 20, 87, .06); transition: transform .15s;
+  }
+  .series-card:hover { transform: translateY(-2px); }
+  .series-card .series-card-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .series-card .ep-num {
+    display: inline-block; background: linear-gradient(135deg, #f48fb1, #ec407a);
+    color: #fff; font-size: 11px; font-weight: 700; padding: 4px 12px;
+    border-radius: 20px; flex-shrink: 0;
+  }
+  .series-card .ep-num.free { background: linear-gradient(135deg, #81c784, #43a047); }
+  .series-card .ep-num.premium { background: linear-gradient(135deg, #f48fb1, #ec407a); }
+  .series-card .ep-num.final { background: linear-gradient(135deg, #ffb74d, #f57c00); }
+  .series-card .price-tag {
+    font-size: 12px; font-weight: 700; color: #ad1457; background: #fce4ec;
+    padding: 3px 10px; border-radius: 12px;
+  }
+  .series-card .price-tag.free-tag { color: #2e7d32; background: #e8f5e9; }
+  .series-card h3 { font-size: 15px; font-weight: 700; color: #880e4f; margin-bottom: 10px; line-height: 1.5; }
+  .series-card .overview { font-size: 13px; color: #5d4037; line-height: 1.7; margin-bottom: 10px; }
+  .series-card ul { list-style: none; padding: 0; margin-bottom: 10px; }
+  .series-card li {
+    position: relative; padding: 4px 0 4px 18px; font-size: 13px; line-height: 1.6; color: #5d4037;
+  }
+  .series-card li::before {
+    content: ''; position: absolute; left: 0; top: 11px;
+    width: 7px; height: 7px; background: #f8bbd0; border-radius: 50%;
+  }
+
+  .导线-box, .导线-box-paywall, .series-导线 {
+    background: #fff9f0; border-radius: 12px; padding: 14px 16px; margin-top: 12px;
+    border: 1px solid #ffe0b2;
+  }
+
+  .cta-box {
+    background: #fff9f0; border-radius: 12px; padding: 14px 16px; margin-top: 12px;
+    border: 1px solid #ffe0b2;
+  }
+  .cta-box .cta-label {
+    font-size: 11px; font-weight: 700; color: #e65100; margin-bottom: 4px;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .cta-box .cta-text { font-size: 13px; color: #5d4037; line-height: 1.7; }
+
+  .paywall-suggestion {
+    background: linear-gradient(135deg, #fce4ec, #fff0f5); border-radius: 12px;
+    padding: 14px 16px; margin-top: 12px; border: 2px dashed #f48fb1;
+  }
+  .paywall-suggestion .pw-label {
+    font-size: 11px; font-weight: 700; color: #ad1457; margin-bottom: 4px;
+  }
+  .paywall-suggestion .pw-text { font-size: 13px; color: #880e4f; line-height: 1.7; }
+
+  .series-connector {
+    text-align: center; padding: 8px 0; color: #f48fb1; font-size: 20px;
+  }
+
+  footer { text-align: center; margin-top: 40px; font-size: 11px; color: #c9929e; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="icon">&#x1F4DD;</div>
+    <h1>note記事アイデアジェネレーター</h1>
+    <p>テーマと対象読者を選ぶだけで、有料記事のアイデアを生成します</p>
+  </header>
+
+  <!-- Form -->
+  <div class="card" id="formCard">
+    <!-- Mode toggle -->
+    <div class="field">
+      <label>モードを選択</label>
+      <div class="mode-toggle">
+        <button class="active" id="modeBtn-single" onclick="setMode('single')">&#x1F4C4; 単発記事モード</button>
+        <button id="modeBtn-series" onclick="setMode('series')">&#x1F4DA; シリーズ設計モード</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>テーマを入力 <span class="sub">（例：AI活用、フリーランス1年目）</span></label>
+      <input type="text" id="theme" placeholder="例：Canvaデザイン術">
+    </div>
+
+    <div class="field">
+      <label>対象読者を選んでください</label>
+      <div class="radio-group">
+        <input type="radio" name="audience" id="a1" value="ママ向け" checked>
+        <label class="radio" for="a1">&#x1F469;&#x200D;&#x1F37C; ママ向け</label>
+        <input type="radio" name="audience" id="a2" value="経営者向け">
+        <label class="radio" for="a2">&#x1F4BC; 経営者向け</label>
+        <input type="radio" name="audience" id="a3" value="フリーランス志望向け">
+        <label class="radio" for="a3">&#x2728; フリーランス志望向け</label>
+        <input type="radio" name="audience" id="a4" value="副業初心者向け">
+        <label class="radio" for="a4">&#x1F4B0; 副業初心者向け</label>
+        <input type="radio" name="audience" id="a5" value="クリエイター向け">
+        <label class="radio" for="a5">&#x1F3A8; クリエイター向け</label>
+        <input type="radio" name="audience" id="a6" value="会社員向け">
+        <label class="radio" for="a6">&#x1F3E2; 会社員向け</label>
+      </div>
+    </div>
+
+    <div class="btn-wrap">
+      <button id="generateBtn" onclick="handleGenerate()">アイデアを生成する</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="dots"><span></span><span></span><span></span></div>
+    <p id="loadingText">アイデアを考えています...</p>
+  </div>
+
+  <!-- Single mode results -->
+  <div id="results">
+    <div class="result-header">
+      <h2>&#x1F389; 記事アイデア 3選</h2>
+      <p id="resultMeta"></p>
+    </div>
+    <div id="articleList"></div>
+    <div class="btn-wrap retry">
+      <button onclick="handleGenerate()">もう一度生成する</button>
+    </div>
+  </div>
+
+  <!-- Article full view (single mode) -->
+  <div id="articleView">
+    <div class="article-view-card">
+      <h2 id="articleViewTitle"></h2>
+      <div id="articleViewBody"></div>
+      <div class="article-actions">
+        <button class="btn-sm" onclick="copyArticle()">&#x1F4CB; 本文をコピー</button>
+        <button class="btn-sm btn-outline" onclick="backToResults()">&#x2190; アイデア一覧に戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Article full view (series mode) -->
+  <div id="seriesArticleView">
+    <div class="article-view-card">
+      <h2 id="seriesArticleViewTitle"></h2>
+      <div id="seriesArticleViewBody"></div>
+      <div class="article-actions">
+        <button class="btn-sm" onclick="copySeriesArticle()">&#x1F4CB; 本文をコピー</button>
+        <button class="btn-sm btn-outline" onclick="backToSeriesResults()">&#x2190; シリーズ一覧に戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Series mode results -->
+  <div id="seriesResults">
+    <div id="seriesContent"></div>
+    <div class="article-actions" style="margin-bottom:24px">
+      <button class="btn-sm" onclick="copySeriesPlan()">&#x1F4CB; シリーズ構成をコピー</button>
+      <button class="btn-sm btn-outline" onclick="backToForm()">&#x2190; 入力に戻る</button>
+    </div>
+    <div class="btn-wrap retry">
+      <button onclick="handleGenerate()">もう一度生成する</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="copy-toast" id="copyToast">コピーしました！</div>
+<footer>&copy; note記事アイデアジェネレーター</footer>
+
+<script>
+// ── Mode state ──
+let currentMode = 'single';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('modeBtn-single').classList.toggle('active', mode === 'single');
+  document.getElementById('modeBtn-series').classList.toggle('active', mode === 'series');
+  // update button label
+  document.getElementById('generateBtn').textContent =
+    mode === 'single' ? 'アイデアを生成する' : 'シリーズ構成を生成する';
+}
+
+function handleGenerate() {
+  if (currentMode === 'single') generate();
+  else generateSeries();
+}
+
+// ── Single-article templates ──
+const templates = {
+  "ママ向け": {
+    titles: [
+      "「時間がないママには無理」と思っていた私が人生変わった3つの方法【{theme}】",
+      "昼寝中の90分だけ。30日で成果が見えた「{theme}」体験記",
+      "「{theme}」で挫折しかけたママが、たった1つの工夫で結果を出せた方法",
+      "スキルなし・経験なしのママが「{theme}」で自信を取り戻すまでの全記録",
+      "ママ友には内緒で始めた「{theme}」｜知識ゼロから60日で成果を出せた5ステップ",
+      "ワンオペ育児中でもできた。「{theme}」で初めて「自分の力で稼げた」と思えた日の話",
+      "「家事と両立できない」を解決する「{theme}」の時間術｜1日2時間の具体的プラン",
+      "「{theme}」は難しそう？知識ゼロのママが3ヶ月で成果を出した具体的手順",
+      "育休中に始めた「{theme}」が、復職後の人生を変えてくれた話",
+    ],
+    headings: [
+      ["あなたの悩み、私も同じでした", "ママが{theme}でうまくいかない3つの原因", "【解決策】忙しいママでも成果が出る5ステップ", "私が実際にやった具体的なスケジュール", "3ヶ月目で変わったこと｜リアルな収益と生活の変化", "まとめ：「やってみようかな」と思ったあなたへ"],
+      ["「自分には無理」と諦めかけていた日", "なぜ多くのママが{theme}で挫折するのか", "たった1つの工夫で変わった私のやり方", "実際に使ったツールと費用を全公開", "初収入が入ったときの正直な気持ち", "読者限定：すぐ使えるテンプレート付き"],
+      ["この記事を書くか迷った理由", "ママが{theme}を始めるときにぶつかる壁トップ5", "壁を乗り越えた具体的な方法｜全部見せます", "私のリアルな1日のタイムスケジュール", "失敗から学んだ「やってはいけないこと」3選", "最後に：完璧じゃなくていい。まず動いてみよう"],
+    ]
+  },
+  "経営者向け": {
+    titles: [
+      "売上が頭打ちだった中小企業が3ヶ月で成果を出した施策を全公開【{theme}】",
+      "「うちにはまだ早い」が命取りに。「{theme}」導入を遅らせて失った3つの機会",
+      "社員10人以下の会社が大企業に勝つための「{theme}」5つの戦略",
+      "伸びている経営者がやっていた「{theme}」活用術｜3社の事例で解説",
+      "「{theme}」の導入に失敗した社長と成功した社長の決定的な違い",
+      "経営者こそ理解すべき「{theme}」の本質｜3つの理由をデータで解説",
+      "人手不足の突破口は「{theme}」だった｜中小企業3社のリアルな導入記録",
+      "経営会議で「{theme}」導入を通すための説得術｜ROI試算テンプレート付き",
+      "「外注vs内製」で迷ったら読む「{theme}」判断基準｜調査データから解説",
+    ],
+    headings: [
+      ["はじめに：「うちの会社には関係ない」が危険な理由", "多くの経営者が{theme}導入で失敗する3つのパターン", "成功企業に共通する導入の5ステップ", "実際の費用と回収までのリアルなタイムライン", "私のクライアント企業で起きた変化｜3社の事例", "まとめ：来週の経営会議で話せるアクションプラン"],
+      ["この記事を書いた背景", "{theme}が経営に与えるインパクトをデータで解説", "なぜ「とりあえず導入」は失敗するのか", "投資対効果を最大化する3つの判断基準", "導入企業のリアルな声｜成功と失敗の分かれ目", "チェックリスト：自社に{theme}は必要か？"],
+      ["経営者が{theme}で見落としがちな落とし穴", "競合が先に動いている可能性を示す5つの兆候", "最小コストで検証する「90日パイロット導入法」", "社内を巻き込むための説明テンプレート", "効果測定で追うべきKPIトップ5", "次のステップ：明日からできる3つのアクション"],
+    ]
+  },
+  "フリーランス志望向け": {
+    titles: [
+      "普通の会社員だった私が独立するまでにやった7つのこと【{theme}】",
+      "「独立は怖い」と3年悩んだ私が踏み出せた理由と、最初の90日間のリアル【{theme}】",
+      "「{theme}」フリーランス1年目の収入・失敗・後悔を全部公開｜これから独立する人へ",
+      "会社員のうちに副業収入を作った方法｜独立前6ヶ月間の全記録【{theme}】",
+      "「スキルがない」と悩んでいた私が初案件を獲得するまでの60日間ロードマップ【{theme}】",
+      "「{theme}」フリーランスの単価を3ヶ月で2倍にした交渉術｜メールテンプレ付き",
+      "「{theme}」で独立して分かった「会社員のうちにやっておくべきだった」5つの準備",
+      "営業が苦手な人間が「{theme}」で安定収入を作った仕組みの全貌",
+      "副業から独立するまでの収入推移とやったことを時系列で全公開【{theme}】",
+    ],
+    headings: [
+      ["独立前夜の正直な気持ち", "なぜ多くの人が「独立したい」のに動けないのか", "私が実践した「リスクゼロ」の独立準備5ステップ", "最初の案件を獲得した具体的な方法", "独立3ヶ月目のリアルな収支を公開", "これから独立する人に伝えたい3つのこと"],
+      ["「自分にできるか不安」だった頃の話", "フリーランスで失敗する人に共通する3つの特徴", "会社員のうちにやるべき準備を優先度順に解説", "ポートフォリオ不要？最初の案件の取り方", "単価を上げるために実践した交渉の具体例", "まとめ：完璧な準備は永遠に来ない。80%で飛べ"],
+      ["この記事を書くことにした理由", "{theme}フリーランスのリアルな収入と生活", "うまくいかなかった時期と、そこから抜け出した方法", "収入を安定させるための「3本柱」戦略", "確定申告・保険・年金で失敗しないための基礎知識", "最後に：1年後の自分を変えるのは、今日の一歩"],
+    ]
+  },
+  "副業初心者向け": {
+    titles: [
+      "「副業で何をすればいいか分からない」と悩んでいた私が結果を出せた全手順【{theme}】",
+      "残業が多い会社員でも副業で成果を出せた「すきま時間活用術」【{theme}】",
+      "「{theme}」の副業を始めて60日で初収入｜完全未経験からの具体的ステップを公開",
+      "会社にバレずに副収入を得ている私の方法｜住民税対策から確定申告まで【{theme}】",
+      "「副業する時間がない」を解決した「{theme}」の始め方｜1日30分の具体的プラン",
+      "副業に「{theme}」を選んで正解だった3つの理由｜半年間の学びと成果の全記録",
+      "知識ゼロ・人脈ゼロから始めた「{theme}」副業｜最初の成果を出すまでの45日間",
+      "土日だけで副業の成果を出す方法｜作業内容とスケジュールを全公開【{theme}】",
+      "副業初心者が「{theme}」で最初の壁を超えるための具体的な3ステップ",
+    ],
+    headings: [
+      ["正直に言います。副業を始める前の私はこうでした", "なぜ副業初心者の9割が3ヶ月以内に辞めてしまうのか", "挫折しないための「小さく始める」3ステップ", "実際に月3万円を稼いだ作業内容を大公開", "会社バレを防ぐための具体的な対策", "まとめ：まずは月1万円。そこから人生が変わる"],
+      ["「副業って本当に稼げるの？」という疑問に正直に答えます", "{theme}が副業初心者に最適な5つの理由", "最初の1件を獲得するための具体的手順", "私の6ヶ月間の収益推移をリアルに公開", "確定申告で困らないための最低限の知識", "次のアクション：今週末にやるべき3つのこと"],
+      ["副業に興味はあるけど不安で動けないあなたへ", "多くの人が副業選びで間違える致命的なポイント", "初期投資ゼロで{theme}を始める完全ガイド", "最短で成果を出すための「学び方」の学び方", "月5万円が見えてくるまでのタイムライン", "まとめ：「やらない後悔」より「やった経験」"],
+    ]
+  },
+  "クリエイター向け": {
+    titles: [
+      "作品は作れるけど稼げない問題を解決した方法｜収入が劇的に変わった具体策【{theme}】",
+      "「クリエイターの敵」だと思っていた「{theme}」に、考えを180度変えられた日の話",
+      "「{theme}」導入で制作時間が半分に｜クリエイターの具体的ワークフロー公開",
+      "「{theme}」×SNS戦略でクリエイターの案件単価が変わる｜具体的な発信メソッド",
+      "「オリジナリティが失われる」は誤解。「{theme}」でクオリティを上げる5つの使い方",
+      "作品で食べていくために「{theme}」を活用して収入源を4つに増やしたやり方",
+      "クリエイターの制作効率を劇的に上げる「{theme}」ツール5選と、やってはいけない使い方",
+      "稼げないクリエイターだった私が「{theme}」で生活を変えるまでの6ヶ月の記録",
+      "「{theme}」はどこまで使っていい？クリエイターが守るべき3つのライン",
+    ],
+    headings: [
+      ["正直、{theme}に抵抗がありました", "クリエイターが「稼げない」と悩む本当の原因", "{theme}を「味方にする」ための3つの考え方", "制作ワークフローを劇的に改善した具体的手法", "収益が変わった実例｜ビフォーアフター公開", "まとめ：{theme}時代にクリエイターが生き残る方法"],
+      ["この記事を読んでほしいクリエイターの特徴", "なぜ「作品の質」だけでは食べていけないのか", "発信力×{theme}で案件が来る仕組みの作り方", "私が使って効果があったツール・サービス5選", "オリジナリティを守りながら{theme}を使うコツ", "今日から試せる3つのアクション"],
+      ["「{theme}に仕事を奪われる」という恐怖と向き合った話", "クリエイターの収入が不安定な根本的な理由", "収入源を複数作る「{theme}×クリエイター」戦略", "単価交渉で使える具体的なフレーズとテンプレート", "半年間の実験で分かった「効く使い方」「効かない使い方」", "最後に：テクノロジーは変わる。でもあなたの感性は唯一無二"],
+    ]
+  },
+  "会社員向け": {
+    titles: [
+      "「このままじゃマズい」と感じた会社員がキャリア激変した話【{theme}】",
+      "通勤時間と昼休みだけでマスターした方法｜忙しい会社員の90日間学習プラン【{theme}】",
+      "「{theme}」を学んだら「あの人に相談しよう」と言われるようになった｜社内評価を変える具体策",
+      "転職活動で「{theme}」スキルが武器になった話｜書類通過率が劇的に変わる理由",
+      "「何か始めなきゃ」と焦る会社員が「{theme}」を選ぶべき5つの理由｜データと体験談で解説",
+      "同期と差がつく！「{theme}」を本業に活かして評価が変わった3つの具体的アクション",
+      "1日30分の「{theme}」学習で仕事のやり方が変わった｜今日から使える実践テクニック5選",
+      "「市場価値を高めたい」会社員がキャリアの選択肢を広げた方法【{theme}】",
+      "会社員が「{theme}」を学ばないと将来後悔する3つの理由｜市場データから見る未来",
+    ],
+    headings: [
+      ["「このままでいいのか」という漠然とした不安の正体", "なぜ多くの会社員がスキルアップに失敗するのか", "忙しい会社員でも続く{theme}学習法3つのコツ", "本業に活かして「成果を出す人」になった具体例", "転職・昇進・副業｜{theme}が開くキャリアの可能性", "まとめ：半年後の自分を変えるのは今日の30分"],
+      ["あなたが感じているキャリアの不安、正しいです", "会社員が{theme}を学ばないリスクをデータで解説", "1日30分×90日の具体的な学習カリキュラム", "職場ですぐ使える{theme}活用アイデア5選", "学んだことを年収アップにつなげる3ステップ", "今週から始められるアクションプラン"],
+      ["何者でもない普通の会社員だった私の話", "「勉強したのに活かせない」を生む3つの落とし穴", "実務で成果を出すための{theme}活用フレームワーク", "上司を唸らせた企画書の作り方｜テンプレート付き", "スキルアップが年収に反映されるまでのリアルな期間", "最後に：「意識高い系」で終わらないために"],
+    ]
+  }
+};
+
+// ── Body templates for single-article mode ──
+const bodyTemplates = {
+  "ママ向け": {
+    intro: [
+      `こんにちは！この記事を開いてくださって、本当にありがとうございます。\n\n毎日の家事に育児に、本当にお疲れさまです。「自分の時間なんてほとんどない…」「でも、何か新しいことを始めてみたい…」そんな気持ち、すごくよく分かります。\n\n私自身、子どもが1歳のときに{theme}と出会いました。最初は「こんな私にできるのかな」って不安でいっぱいだったんです。でもね、一歩踏み出してみたら、世界がガラッと変わりました。\n\nこの記事では、忙しいママでも無理なく{theme}を始められるように、私の実体験をもとにお伝えしていきますね。「ちょっとやってみようかな」と思ってもらえたら、それだけで嬉しいです。`,
+      `はじめまして。この記事に来てくださって、ありがとうございます！\n\nきっとこの記事を読んでいるあなたは、「今の生活を少しでも変えたい」「子育てしながらでもできることってないかな」と思っているのではないでしょうか。\n\n実は、私もまったく同じでした。子どもの寝かしつけが終わった夜、スマホでなんとなく「ママ 在宅ワーク」って検索したのが始まりです。そこで出会ったのが{theme}だったんですよね。\n\n今回は、私のようにゼロからスタートしたママが{theme}でどう変われるのか、リアルな経験をお話ししていきます。肩の力を抜いて、お茶でも飲みながら読んでいただけたら嬉しいです。`,
+    ],
+    middle: [
+      `ここが一番気になるところですよね。\n\n正直に言うと、{theme}って最初はちょっと難しく感じるかもしれません。私も「何から手をつければいいの？」って状態でした。\n\nでもね、大丈夫。コツがあるんです。\n\nまず大切なのは、「完璧を目指さない」ということ。ママって、つい何でもきちんとやろうとしちゃうんですよね（私もそうでした…笑）。でも{theme}は、小さく始めて少しずつ慣れていくのが一番の近道なんです。\n\n具体的には、1日30分からでOK。子どもがお昼寝している間や、夜の自由時間を使って、まずは基本を学んでいきましょう。私のおすすめは、まず全体像をざっくり把握すること。細かいテクニックは後からいくらでも身につきます。\n\n実際に私がやった手順はこんな感じです：\n\n1. まずは{theme}について調べて全体像を理解する（1週間）\n2. 無料で使えるツールやサービスを試してみる（2週間）\n3. 小さな目標を立てて、実際にやってみる（1ヶ月）\n\n焦らなくて大丈夫。あなたのペースで進めていきましょうね。`,
+      `さて、ここからは具体的な話に入っていきますね。\n\n{theme}を始めるにあたって、まず知っておいてほしいのが「ママだからこその強み」があるということ。\n\n子育てを通して身につく力って、実はすごいんです。マルチタスク能力、相手の気持ちを察する力、限られた時間で効率よく動く力…これって全部、{theme}に活かせるスキルなんですよ。\n\n「え、そうなの？」って思いましたか？ 本当にそうなんです。\n\nたとえば、{theme}では相手のニーズを理解することがとても大切。ママが毎日やっている「子どもが何を求めているか察する」あの感覚が、そのまま役立ちます。\n\n私の周りでも、{theme}で活躍しているママはたくさんいます。みんな口を揃えて言うのが「子育ての経験が意外と活きてる」ということ。\n\nだから自信を持ってくださいね。あなたが思っている以上に、あなたにはもう素敵なスキルが備わっています。`,
+    ],
+    schedule: [
+      `「でも実際、いつやるの？」って思いますよね。ここが一番リアルに知りたいところだと思います。\n\n私の場合のタイムスケジュールをご紹介しますね。\n\n【平日のスケジュール例】\n6:00　起床・朝ごはん準備\n7:30　子どもを送り出す\n8:00〜9:30　{theme}の作業タイム（集中！）\n9:30〜12:00　家事・買い物\n12:00　お昼ごはん\n13:00〜14:30　{theme}の勉強 or 作業\n15:00　子どものお迎え\n15:30〜21:00　育児タイム\n21:30〜22:30　自分時間（{theme}の復習や情報収集）\n\nポイントは「完璧にこなそうとしない」こと。体調が悪い日、子どもの機嫌が悪い日は、潔くお休みにしていました。\n\nそれでも、週に10〜15時間くらいは確保できるんです。「そんなに！？」と思うかもしれませんが、細切れ時間を集めると意外といけます。\n\n大事なのは継続すること。毎日完璧じゃなくても、「今週はこれだけできた」って自分を褒めてあげてくださいね。`,
+    ],
+    deep: [
+      `ここからは、もう少し踏み込んだ内容をお話ししていきますね。\n\n{theme}で成果を出すために、私が特に大切だと感じているのが「自分の強み」を見つけることなんです。\n\nママとして生活している中で、あなたが得意なこと、好きなこと、自然とできてしまうこと。それが{theme}の世界で唯一無二の武器になります。\n\n例えば、整理収納が得意なママなら、それを{theme}に活かして発信できます。お料理が好きなママなら、その視点を取り入れることで差別化ができます。\n\n「自分には特別なスキルなんてない」と思うかもしれません。でもそれは絶対にそんなことなくて、気づいていないだけなんです。\n\n試しに、今日一日の中で「ちょっと楽しいな」と感じた瞬間を思い出してみてください。それがヒントになりますよ。\n\n私も最初は「何の取り柄もない普通のママ」だと思っていました。でも{theme}を通じて、自分にも人の役に立てるスキルがあると気づけたんです。その経験は、自己肯定感にもつながりました。`,
+    ],
+    closing: [
+      `ここまで読んでくださって、本当にありがとうございます。\n\n長い記事でしたが、お伝えしたかったのはシンプルなことです。\n\n{theme}は、ママの人生を豊かにしてくれる可能性がある。そして、始めるのに遅すぎることなんてない。\n\nもちろん、すぐに結果が出るわけじゃないし、大変なこともあります。「やっぱり無理かも…」って思う夜もあるかもしれません。\n\nでもね、そう思えるということは、それだけ真剣に向き合っている証拠。それってすごいことなんですよ。\n\nまずは今日、ひとつだけ小さなアクションを起こしてみてください。{theme}について調べてみるでも、ノートに目標を書いてみるでも、なんでもOKです。\n\nその一歩が、3ヶ月後、半年後のあなたをきっと変えてくれます。\n\n一緒にがんばりましょうね。応援しています！`,
+    ]
+  },
+  "経営者向け": {
+    intro: [
+      `本記事をお読みいただきありがとうございます。\n\n近年、{theme}は経営における重要なテーマのひとつとして注目を集めています。しかし実際のところ、「話題になっているのは知っているが、自社にどう取り入れればいいのか分からない」という経営者の方が多いのではないでしょうか。\n\n私自身、複数の中小企業のコンサルティングに携わる中で、{theme}を上手に活用している企業とそうでない企業の間に、大きな差が生まれ始めていることを実感しています。\n\n本記事では、経営者が押さえるべき{theme}のポイントを、具体的な事例とともに解説します。戦略の意思決定にお役立ていただける内容を目指しました。`,
+    ],
+    middle: [
+      `では具体的に、{theme}が経営にどのようなインパクトを与えるのか見ていきましょう。\n\nまず押さえておきたいのが、コスト削減と売上向上の両面で効果が期待できるという点です。\n\nコスト面では、{theme}の導入により業務効率が改善され、人件費や外注費の最適化が可能になります。ある企業では、{theme}の仕組みを取り入れたことで、月間の作業工数を約30%削減することに成功しました。\n\n売上面では、{theme}を活用した顧客体験の向上が、リピート率やLTVの改善につながっています。特にBtoCビジネスにおいて、この傾向は顕著です。\n\n重要なのは、これらの効果は大企業だけのものではないということ。むしろ意思決定の速い中小企業の方が、{theme}の恩恵を受けやすいケースも少なくありません。`,
+    ],
+    schedule: [
+      `導入を決めた場合、どのようなタイムラインで進めるのが現実的でしょうか。\n\nフェーズ1（1〜2ヶ月目）：情報収集と現状分析\nまずは自社の業務プロセスを棚卸しし、{theme}が効果を発揮しそうな領域を特定します。\n\nフェーズ2（3〜4ヶ月目）：パイロット導入\nいきなり全社展開するのではなく、特定の部門やプロジェクトで試験的に導入します。\n\nフェーズ3（5〜6ヶ月目）：効果測定と改善\nKPIに基づいて効果を定量的に評価し、必要な調整を行います。\n\n重要なのは、各フェーズで「撤退基準」も設けておくこと。合わないと分かれば早めに方針転換できる体制が、リスクを最小化します。`,
+    ],
+    deep: [
+      `ここからは、より実践的な内容に踏み込んでいきます。\n\n{theme}を自社に導入する際、多くの経営者が見落としがちなポイントがあります。それは「組織の受容性」です。\n\nどれほど優れた{theme}のソリューションを導入しても、現場がついてこなければ効果は出ません。特に中小企業では、経営者の鶴の一声で導入が決まることが多いですが、現場の理解と協力なしには定着しないのが現実です。\n\n成功企業が行っているのは、導入前の「巻き込み」です。なぜ{theme}が必要なのか、導入によって現場がどう楽になるのか、丁寧に説明する時間を取っています。\n\nまた、費用対効果の試算も重要です。{theme}への投資は、短期的にはコストに見えますが、中長期で見ると大きなリターンを生む可能性があります。`,
+    ],
+    closing: [
+      `最後までお読みいただきありがとうございます。\n\n本記事のポイントを整理します。\n\n- {theme}は経営戦略の一環として捉えるべきテーマである\n- 導入は目的を明確にした上で、スモールスタートが基本\n- 現場の巻き込みと効果測定の仕組みが成功のカギ\n- 競合が動き始めている今、「検討を始める」こと自体に価値がある\n\n{theme}の導入は、一朝一夕で成果が出るものではありません。しかし、正しいアプローチで取り組めば、確実に事業の競争力を高めてくれます。\n\n本記事が、御社の{theme}に関する意思決定の一助となれば幸いです。`,
+    ]
+  },
+  "フリーランス志望向け": {
+    intro: [
+      `この記事を開いてくれたあなた、ありがとうございます。\n\n「いつか会社を辞めて、自分の力で稼いでみたい」「フリーランスに興味はあるけど、何から始めればいいか分からない」そんな気持ちでこの記事にたどり着いたのではないでしょうか。\n\n私も数年前、まさに同じ状態でした。会社員として働きながら、将来への漠然とした不安と、「このままでいいのかな」という気持ちを抱えていました。\n\nそんな私が{theme}と出会い、副業から始めて、最終的にフリーランスとして独立するまでの道のりをお話しします。すべて実体験ベースなので、きっと参考になる部分があるはずです。`,
+    ],
+    middle: [
+      `まず、{theme}の全体像をお話ししますね。\n\n{theme}は、ここ数年で需要が急増している分野です。特にフリーランス市場では、{theme}のスキルを持つ人材が圧倒的に不足しています。つまり、今から始めれば十分にチャンスがあるということ。\n\n学習にかかる期間の目安は、本気で取り組んで3〜6ヶ月。もちろん個人差はありますが、会社員をしながらでも十分に学べるペースです。\n\n具体的な学習ステップは：\n\n1. 基礎知識をインプットする（書籍・動画・オンライン講座）\n2. 実際に手を動かしてアウトプットする\n3. ポートフォリオを作成する\n4. 小さな案件にチャレンジする\n\nこの流れで進めていけば、着実にスキルが身についていきます。`,
+    ],
+    schedule: [
+      `「会社員しながら、いつ勉強するの？」という疑問にお答えしますね。\n\n【平日】\n6:30　起床\n7:00〜8:00　{theme}の学習（朝が一番集中できる）\n8:30〜18:00　会社の仕事\n19:00〜20:00　夕食・リラックス\n20:00〜22:00　{theme}の実践・ポートフォリオ制作\n22:30　就寝\n\n【休日】\n午前中：{theme}の集中作業（3〜4時間）\n午後：自由時間・情報収集\n\n週あたり約15〜20時間を{theme}に充てていた計算です。\n\n大切なのは「週単位で調整する」こと。1日できなくても、週末にカバーすればOK。この柔軟さがあったから、挫折せずに続けられました。`,
+    ],
+    deep: [
+      `ここからは、さらに具体的な内容に入っていきます。\n\n{theme}で独立するうえで避けて通れないのが「最初の案件獲得」です。多くの人がここで挫折します。\n\n私が実践した方法を正直にお伝えすると：\n\nまず、クラウドソーシングに登録して、低単価でもいいから実績を作りました。最初の3件は、正直時給換算すると悲しくなるレベル。でも、この実績があるとないとでは、その後の案件獲得のしやすさが全然違います。\n\n次に、SNS経由での案件獲得。発信を続けていると、「お仕事お願いできますか？」という連絡が来るようになります。\n\nそして、紹介。一度仕事をしたクライアントが別のクライアントを紹介してくれる。これが一番ありがたいし、単価も上がりやすいです。\n\n独立して半年後には、紹介だけで仕事が回るようになりました。近道はありませんが、確実な道はあります。`,
+    ],
+    closing: [
+      `最後まで読んでくださって、ありがとうございます！\n\n{theme}でフリーランスを目指す道のり、イメージが湧いてきたでしょうか。\n\n正直に言うと、簡単ではありません。不安もあるし、孤独を感じる瞬間もあります。でも、自分のスキルで稼げるようになった時の達成感は、何にも代えがたいものがあります。\n\nこの記事で一番伝えたかったのは、「行動すれば変わる」ということ。\n\n明日から始めなくてもいい。でも、今日この記事を読んだことをきっかけに、何かひとつだけ動いてみてください。\n\nその小さな一歩が、半年後のあなたを確実に変えてくれます。\n\n一緒にがんばりましょう！応援しています。`,
+    ]
+  },
+  "副業初心者向け": {
+    intro: [
+      `こんにちは！この記事を読んでくださって、ありがとうございます。\n\n「副業を始めてみたいけど、何から手をつければいいか分からない」「本業が忙しいのに、本当にできるの？」\n\nそう思っていませんか？ 実は私も、つい1年前まではまったく同じ気持ちでした。\n\n本業のお給料だけでは将来が不安で、でも何をすればいいか分からなくて、ネットで「副業 おすすめ」と検索する日々。そんな中で出会ったのが{theme}でした。\n\nこの記事では、完全未経験だった私が{theme}で副収入を得られるようになるまでのリアルな体験をお話しします。「自分にもできるかも」と思ってもらえたら嬉しいです。`,
+    ],
+    middle: [
+      `さて、ここからは具体的な話に入りますね。\n\n{theme}を副業として始める最大のメリットは、初期投資がほとんどかからないこと。パソコンとネット環境さえあれば、今日からでもスタートできます。\n\n「でも、スキルがない自分にできるの？」と思いますよね。大丈夫です。最初は誰でも初心者。大切なのは「始めるかどうか」だけです。\n\n私が実践した学習方法はシンプルで：\n\n1. まずYouTubeやブログで{theme}の基礎を学ぶ（1〜2週間）\n2. 無料ツールを使って実際にやってみる（2〜3週間）\n3. クラウドソーシングに登録して案件を探す（1ヶ月目〜）\n\nこの3ステップで、私は副業開始から2ヶ月目で初収入を得ることができました。金額は小さかったけど、「自分の力で稼げた」という感覚は本当に大きかったです。`,
+    ],
+    schedule: [
+      `副業の時間管理について、リアルなスケジュールを公開しますね。\n\n本業がある中での副業は、時間の使い方がすべてです。\n\n【平日のスケジュール例】\n6:30　起床・身支度\n7:30〜8:30　通勤（この時間に{theme}の情報収集）\n9:00〜18:00　本業\n19:00〜20:00　夕食・リラックス\n20:30〜22:00　{theme}の副業タイム\n22:30　就寝\n\n【休日のスケジュール例】\n午前：{theme}の作業に集中（2〜3時間）\n午後：自由時間\n\nポイントは「毎日やろうとしない」こと。私は週4〜5日ペースで、疲れた日は思い切って休んでいました。\n\n月にすると40〜50時間くらい。これで月3〜5万円の副収入が得られるようになりました。時給換算すると最初は低いですが、スキルが上がるにつれてどんどん効率が良くなりますよ。`,
+    ],
+    deep: [
+      `ここからは、もう少し踏み込んだ話をしますね。\n\n副業で{theme}を続けていく上で、避けて通れないのが「会社にバレないか問題」です。\n\nまず前提として、就業規則を必ず確認してください。最近は副業OKの会社も増えていますが、届出が必要なケースもあります。\n\n住民税の普通徴収への切り替えは、確定申告時に「自分で納付」を選ぶだけ。これで会社の給与から副業分の住民税が天引きされることを防げます。\n\n確定申告は、副業の所得が年間20万円を超えたら必要です。「え、面倒くさそう…」と思うかもしれませんが、会計ソフトを使えば意外と簡単。freeeやマネーフォワードなら、ほぼ自動で帳簿がつけられます。\n\nお金まわりの知識は最初に身につけておくと安心。副業を続ける上での精神的な支えにもなりますよ。`,
+    ],
+    closing: [
+      `最後まで読んでくださって、ありがとうございます！\n\n副業で{theme}を始めてみたいという気持ち、少しでも後押しできたでしょうか。\n\n正直、最初は大変です。本業で疲れている中、もうひと頑張りするわけですから。「今日はやりたくないな…」と思う日も、正直あります。\n\nでも、初めて自分の力で稼いだ時の喜びは格別です。金額以上の価値がそこにはあります。\n\nまずは今日、ひとつだけアクションを起こしてみてください。{theme}について調べてみるだけでもOK。その一歩が、3ヶ月後のあなたを変えてくれます。\n\n一緒に頑張りましょう！応援しています。`,
+    ]
+  },
+  "クリエイター向け": {
+    intro: [
+      `この記事を開いてくれてありがとうございます。\n\nクリエイターとして活動しているあなたに、ぜひ知ってほしいことがあります。{theme}は、あなたの創作活動をもっと面白く、もっと自由にしてくれる可能性があるんです。\n\n「{theme}ってクリエイターに関係あるの？」と思った方もいるかもしれません。実は、大いに関係があります。\n\n私自身、デザイナーとして活動する中で{theme}を取り入れたことで、制作の幅が格段に広がりました。効率も上がったし、新しい表現にも挑戦できるようになった。\n\nこの記事では、クリエイター目線で{theme}の魅力と具体的な活用法をお伝えします。あなたの創作活動のヒントになれば嬉しいです。`,
+    ],
+    middle: [
+      `{theme}がクリエイターにとってどんな武器になるのか、具体的にお話ししますね。\n\n大きく分けて3つの価値があります。\n\n1つ目は「制作効率のアップ」。{theme}を活用することで、これまで時間がかかっていた工程を大幅に短縮できます。空いた時間をクリエイティブな部分に集中できるのは、大きなメリットです。\n\n2つ目は「表現の幅が広がる」こと。{theme}を取り入れることで、今まで思いつかなかったアイデアや手法に出会えます。「こんなこともできるんだ」という発見が、創作のモチベーションにつながります。\n\n3つ目は「収益化の選択肢が増える」こと。{theme}のスキルを持つクリエイターは市場価値が高く、受けられる仕事の幅が広がります。\n\n「でも、{theme}に頼るとオリジナリティが失われるのでは？」という心配もあると思います。結論から言うと、使い方次第です。{theme}はあくまでツール。あなたの個性を引き出すために使えばいいんです。`,
+    ],
+    schedule: [
+      `制作ワークフローに{theme}をどう組み込むか、具体例をお見せしますね。\n\n【{theme}を取り入れた制作フロー例】\n\nStep 1：リサーチ・インプット（30分）\n→ {theme}を使ってトレンドリサーチやアイデア出し\n\nStep 2：コンセプト設計（1時間）\n→ 自分の頭で考える。ここはクリエイターの腕の見せどころ\n\nStep 3：制作・実作業（2〜3時間）\n→ {theme}で効率化できる部分は任せ、クリエイティブに集中\n\nStep 4：ブラッシュアップ（1時間）\n→ 仕上がりをチェック。細部は自分の手で調整\n\nStep 5：発信・納品\n→ SNS投稿やクライアントへの納品\n\nポイントは「{theme}に任せるところ」と「自分でやるところ」を明確にすること。すべてを{theme}に頼るのではなく、面倒な作業を任せてクリエイティブに集中する。この使い分けが大切です。`,
+    ],
+    deep: [
+      `ここからは、クリエイターならではの{theme}活用テクニックをお伝えします。\n\n多くのクリエイターが見落としがちなのが「{theme}×ブランディング」の組み合わせです。\n\n作品のクオリティを上げることはもちろん大切。でも、それだけでは食べていけない時代です。自分の作品や世界観を、いかに多くの人に届けるか。そこに{theme}を活用するんです。\n\n例えば：\n- SNS投稿のキャプション作成を効率化\n- ポートフォリオサイトのコンテンツ充実\n- クライアントへの提案資料のブラッシュアップ\n- noteやブログでの制作プロセス発信\n\nクリエイターは「作ること」に集中したい。でも「届けること」も同じくらい大切。{theme}は、その「届ける」部分をサポートしてくれる心強い味方です。\n\n実際に私は{theme}を発信に活用し始めてから、SNSのフォロワーが3ヶ月で2倍に。仕事の問い合わせも増えました。作品の質×発信の質。この掛け算がクリエイターの収入を左右します。`,
+    ],
+    closing: [
+      `ここまで読んでくださって、ありがとうございます！\n\n{theme}は、クリエイターにとって「脅威」ではなく「味方」です。使い方を知っているかどうかで、これからのクリエイター人生が大きく変わります。\n\n大切なのは、自分のクリエイティブの軸をしっかり持つこと。{theme}はあくまで道具。あなたの個性や世界観は、あなたにしか生み出せません。\n\nぜひ今日から、少しずつ{theme}を取り入れてみてください。新しい可能性にワクワクするはずです。\n\nクリエイターとしてのあなたの挑戦を、応援しています！`,
+    ]
+  },
+  "会社員向け": {
+    intro: [
+      `こんにちは。この記事を開いてくださって、ありがとうございます。\n\n「このまま今の会社で働き続けて大丈夫かな」「もっとスキルアップしたいけど、何から始めれば…」\n\nそんな気持ちを持っている会社員の方、多いのではないでしょうか。私もかつて、まさにその一人でした。\n\n転機になったのは{theme}との出会いです。特別なきっかけがあったわけじゃなく、たまたま見かけた記事がきっかけ。でも学んでみたら、本業にもキャリアにも予想以上のインパクトがありました。\n\nこの記事では、普通の会社員が{theme}を学んでどう変わったか、リアルな体験をもとにお伝えします。`,
+    ],
+    middle: [
+      `{theme}が会社員のキャリアにどう役立つのか、具体的にお話ししますね。\n\nまず一番実感しているのが「業務効率の向上」です。{theme}の知識があると、これまで時間をかけていた業務がグッと短縮されます。空いた時間で別の仕事に取り組めるので、自然と社内評価も上がりました。\n\n次に「社内での立ち位置の変化」。{theme}に詳しい人は、まだまだ少数派です。「○○さんに聞けば分かる」というポジションを取れると、チーム内での存在感が一気に高まります。\n\n3つ目は「転職市場での価値向上」。{theme}のスキルを持つ人材の需要は年々高まっています。今のうちに身につけておけば、キャリアの選択肢が確実に広がります。\n\n実際に私は{theme}を学び始めて半年後、担当業務の効率が約30%改善。上司からの評価も上がり、任される仕事の幅が広がりました。特別な才能は必要ありません。「学んで、使ってみる」それだけです。`,
+    ],
+    schedule: [
+      `忙しい会社員がどうやって学習時間を確保するか、私のリアルなスケジュールを公開します。\n\n【平日】\n7:00〜7:30　通勤電車で{theme}のポッドキャストを聴く\n12:15〜12:45　昼休みに記事や動画で学習\n19:30〜20:30　帰宅後に実践（手を動かす）\n\n【休日】\n午前中：{theme}の集中学習（2時間）\n午後：自由に過ごす\n\n1日30分〜1時間、週末に2時間。合計すると週に約5〜7時間です。\n\n「それだけ？」と思うかもしれませんが、この積み重ねが3ヶ月で大きな差になります。ポイントは「すきま時間」を活用すること。通勤時間、昼休み、帰宅後のちょっとした時間。これらを「{theme}タイム」に変えるだけです。\n\n大事なのは毎日完璧にこなすことじゃなく、週単位で「今週はこれだけやれた」と思えること。自分を追い詰めず、楽しく続けていきましょう。`,
+    ],
+    deep: [
+      `ここからは、{theme}を本業に活かす具体的な方法をお伝えします。\n\n学んだ知識を実務で使うのが、最も効率の良い学習法です。\n\n【すぐに使える活用例】\n\n1. 業務の効率化\n日々のルーティン作業に{theme}の考え方を取り入れるだけで、作業時間が短縮されます。まずは自分の業務を棚卸しして「時間がかかっている作業」を見つけましょう。\n\n2. 企画・提案への応用\n{theme}の知識をもとに新しい提案ができると、社内での評価が変わります。「{theme}を活用したらこうなります」と具体的な数字やイメージを示せるのが強みです。\n\n3. チーム内での知識共有\n自分が学んだことを社内勉強会やチャットで共有すると、周囲からの信頼が厚くなります。「教えることで理解が深まる」のは学習の鉄則ですよね。\n\nまずは小さく始めてOK。「今日の業務のこの部分に{theme}を使ってみよう」くらいの気軽さで大丈夫です。`,
+    ],
+    closing: [
+      `最後まで読んでくださって、ありがとうございます！\n\n会社員として{theme}を学ぶことは、今のキャリアにも将来のキャリアにもプラスになる「最高の自己投資」だと思っています。\n\n特別なことをする必要はありません。通勤時間にちょっと学ぶ、昼休みに記事を読む、帰宅後に30分手を動かしてみる。それだけで、半年後のあなたは確実に変わっています。\n\n「忙しいから無理」じゃなく「忙しいからこそ、効率よく学ぶ方法を身につける」。この発想の転換が、キャリアアップの第一歩です。\n\nあなたの成長を応援しています。まずは今日から、小さな一歩を踏み出してみてくださいね。`,
+    ]
+  }
+};
+
+// ── Series templates ──
+const seriesTemplates = {
+  "ママ向け": {
+    magazines: [
+      { title: "【完全版】ママのための{theme}入門マガジン", desc: "「子育てしながらでも始められる{theme}」をテーマに、基礎知識から実践、収益化まで5記事で完全解説。忙しいママでも自分のペースで読み進められるシリーズです。家事・育児の合間に、あなたらしい働き方の第一歩を踏み出してみませんか？" },
+      { title: "{theme}でママの人生が変わるマガジン", desc: "未経験のママが{theme}を学び、在宅で収入を得るまでのリアルなロードマップをお届けします。全5回のシリーズで「知る→始める→稼ぐ→伸ばす→まとめ」を丁寧に解説。あなたの「やってみたい」を全力で応援するマガジンです。" },
+    ],
+    articles: [
+      { // 記事1: 無料（集客用）
+        titles: [
+          "【無料】{theme}って何？忙しいママにこそ知ってほしい3つのこと",
+          "【無料】ママが{theme}を始めるべき理由｜知識ゼロからの第一歩",
+          "【無料】{theme}で変わった私の生活｜ママの在宅ワーク入門",
+        ],
+        overviews: [
+          "「{theme}って最近よく聞くけど、実際どうなの？」そんなママの疑問にやさしくお答えする入門記事です。専門用語なし、ママ目線でわかりやすく解説。この1本を読めば、{theme}の全体像がスッキリ分かります。",
+          "子育てしながら{theme}で在宅ワークを始めた私の体験をもとに、ママが知っておくべき基礎をまとめました。「私にもできるかも」と思えるきっかけになれば嬉しいです。",
+        ],
+        headings: [
+          ["はじめに：この記事を書いた理由", "そもそも{theme}ってなに？ママ向けにやさしく解説", "ママが{theme}を始めるメリット3選", "【ここまでが無料パート】", "始める前に知っておきたい注意点", "次の記事の紹介"],
+          ["自己紹介：普通のママだった私が{theme}に出会うまで", "{theme}の基本をざっくり5分で理解", "ママの在宅ワークに{theme}が向いている理由", "【ここまでが無料パート】", "よくある不安Q&A", "シリーズ全体のご案内"],
+        ],
+        paywallTexts: [
+          "ここまで読んでくださってありがとうございます！\n\n{theme}の基本的なイメージ、つかめましたか？「ちょっと面白そうかも」と思ってくださったなら嬉しいです。\n\nこの記事では概要をお伝えしましたが、次の記事（有料）では「じゃあ具体的にどう始めるの？」という実践部分を詳しく解説しています。\n\n忙しいママでも今日から始められるステップバイステップのガイドです。スケジュール例やおすすめツールも全部載せています。",
+          "ここまでお読みいただきありがとうございます！\n\n「もう少し詳しく知りたい」「実際にやってみたい」と思った方は、ぜひ次の記事も読んでみてくださいね。\n\n有料記事では、私が実際に使っているツールやリアルなスケジュール、つまずいたポイントと解決法など、無料記事では書ききれなかった具体的なノウハウをすべて公開しています。",
+        ],
+      },
+      { // 記事2: 有料 ¥980
+        titles: [
+          "【実践編】ママが{theme}を始めるための完全ステップガイド",
+          "【準備編】{theme}を始める前にやるべきこと｜ママ向け完全版",
+          "今日から始める{theme}｜ママのためのスタートアップガイド",
+        ],
+        overviews: [
+          "「やってみたい」を「やってみた」に変える実践ガイド。必要な準備、おすすめツール、1日のスケジュール例まで具体的にお伝えします。この記事を読みながら手を動かせば、今日から{theme}をスタートできます。",
+        ],
+        headings: [
+          ["前回のおさらいと今回のゴール", "準備するもの・初期費用まとめ", "おすすめツール・サービス5選", "ママ向け1日スケジュール例", "最初の1週間でやるべきこと", "次回予告：案件獲得のリアル"],
+          ["前の記事を読んでいない方へ", "{theme}を始めるのに必要な環境づくり", "無料で使えるおすすめツール", "家事育児と両立するタイムブロッキング術", "初心者がやりがちなNG行動3つ", "次回予告：収益化への道"],
+        ],
+      },
+      { // 記事3: 有料 ¥980
+        titles: [
+          "【収益化編】ママが{theme}で最初の1万円を稼ぐロードマップ",
+          "{theme}で稼ぐ！ママの案件獲得＆収益化マニュアル",
+          "ママが{theme}で月5万円を目指す具体的な方法",
+        ],
+        overviews: [
+          "学んだ{theme}のスキルを、実際の収入につなげるための完全ガイド。案件の見つけ方、提案文の書き方、価格設定のコツまで、収益化に必要なすべてを解説します。",
+        ],
+        headings: [
+          ["ここまでの振り返り", "最初の案件はどこで見つける？", "選ばれる提案文の書き方テンプレート", "価格設定の考え方｜安売りしないコツ", "リピーターを増やすコミュニケーション術", "次回予告：スキルアップ編"],
+          ["前回までのおさらい", "クラウドソーシングの活用法", "SNSからの案件獲得テクニック", "ポートフォリオの作り方", "収入を安定させる3つの工夫", "次回予告：ステップアップ戦略"],
+        ],
+      },
+      { // 記事4: 有料 ¥980
+        titles: [
+          "【ステップアップ編】{theme}で単価を上げる！ママのスキルアップ戦略",
+          "{theme}を武器に月収アップ！ママのキャリア設計術",
+          "脱・初心者！{theme}ママが次のレベルに進むために",
+        ],
+        overviews: [
+          "基礎を身につけたら次のステージへ。単価アップの交渉術、差別化の方法、ママならではの強みの活かし方を解説。{theme}を長く続けられる仕組みを作りましょう。",
+        ],
+        headings: [
+          ["ここまでの成長を振り返ろう", "単価アップのための3つの戦略", "ママの経験を{theme}に活かす差別化術", "時間単価を上げるための効率化テクニック", "長く続けるためのメンタル管理", "最終回予告：シリーズ総まとめ"],
+          ["前回までの道のりを振り返り", "「また頼みたい」と言われるための秘訣", "ママだからこその強み・差別化ポイント", "作業効率を2倍にするコツ", "家族との関係を大切にしながら続ける方法", "次回（最終回）の予告"],
+        ],
+      },
+      { // 記事5: まとめ有料 ¥1,980
+        titles: [
+          "【総集編】ママのための{theme}完全ガイド｜知識ゼロから収益化まで",
+          "【保存版】{theme}×ママ｜シリーズ総まとめ＆特別コンテンツ",
+          "【完結】{theme}でママの人生を変える｜全ノウハウ総まとめ",
+        ],
+        overviews: [
+          "シリーズ全4回の内容を凝縮し、さらに総集編だけの特別コンテンツを加えた完全保存版。このマガジンをフォローしてくださった方への感謝を込めて、チェックリストやテンプレートも特別収録。",
+        ],
+        headings: [
+          ["シリーズを振り返って", "【総まとめ】{theme}ロードマップ一覧", "シリーズでは書ききれなかったQ&A", "特別付録：すぐ使えるテンプレート集", "読者さんの成功エピソード紹介", "最後に：あなたへのメッセージ"],
+          ["全4回の振り返りダイジェスト", "【保存版】{theme}チェックリスト", "よくある質問まとめ10選", "特別コンテンツ：月収別のロードマップ", "読者コミュニティのご案内", "おわりに：ママの可能性は無限大"],
+        ],
+      },
+    ],
+    nextArticleTexts: [
+      "次の記事では、いよいよ実践編に入ります！「読んだだけ」で終わらせず、実際に手を動かすための具体的なステップをお伝えしますね。一緒にがんばりましょう！",
+      "次回は、みんなが一番気になる「収益化」のお話です。「{theme}でお金をもらうなんて…」と思っているあなたにこそ読んでほしい内容になっています。お楽しみに！",
+      "次の記事では、ステップアップの方法をお伝えします。「もうちょっと収入を増やしたい」「もっと効率よくやりたい」そんなママは必読です！",
+      "いよいよ次回は最終回！シリーズ全体の総まとめに加えて、特別コンテンツもたっぷり用意しています。ここまで読んでくださったあなたへの感謝を込めて、保存版にしますね。",
+    ],
+  },
+  "経営者向け": {
+    magazines: [
+      { title: "経営者のための{theme}戦略マガジン【全5回】", desc: "「{theme}を自社にどう取り入れるか」を経営視点で解説するシリーズ。市場分析から導入計画、効果測定、スケール戦略まで体系的に学べます。意思決定に必要な情報を、忙しい経営者向けにコンパクトにまとめました。" },
+    ],
+    articles: [
+      {
+        titles: [
+          "【無料】なぜ今{theme}なのか？経営者が5分で掴む全体像",
+          "【無料】{theme}が経営を変える｜知らないと損する最新トレンド",
+        ],
+        overviews: [
+          "{theme}が経営に与えるインパクトの全体像を、データと事例を交えて解説。「結局何が変わるのか」を端的にお伝えする、経営者のための入門記事です。",
+        ],
+        headings: [
+          ["はじめに：本記事の目的", "{theme}市場の現在地をデータで把握", "導入企業の成果サマリー", "【ここまでが無料パート】", "自社に関係あるかの判断基準", "シリーズ全体の構成"],
+        ],
+        paywallTexts: [
+          "ここまでで{theme}の概況と可能性をお伝えしました。\n\n「自社にも関係がありそうだ」と感じた方は、次の記事で導入判断に必要なフレームワークと具体的なROI試算の方法を解説しています。\n\n経営会議でそのまま使える資料の構成もお伝えしていますので、ぜひ次のステップに進んでみてください。",
+        ],
+      },
+      {
+        titles: [
+          "{theme}の導入判断フレームワーク｜経営者が見るべき数字と指標",
+          "{theme}導入のROI試算｜投資対効果をどう見積もるか",
+        ],
+        overviews: ["自社に{theme}を導入すべきか。判断に必要なフレームワークとROI試算の方法を具体的に解説します。"],
+        headings: [
+          ["前回のポイント振り返り", "導入判断の5つのチェックポイント", "ROI試算のフレームワーク", "業種別の効果シミュレーション", "経営会議向けの資料構成例", "次回予告：実装ステップ"],
+        ],
+      },
+      {
+        titles: [
+          "{theme}の実装ステップ｜失敗しない導入計画の作り方",
+          "{theme}をスモールスタートで導入する実践ガイド",
+        ],
+        overviews: ["導入を決めた後の具体的なアクションプラン。フェーズ別の進め方、ベンダー選定、社内体制の構築方法を解説します。"],
+        headings: [
+          ["前回までの流れ", "3フェーズの導入ロードマップ", "ベンダー・ツール選定の判断基準", "社内推進チームの組み方", "現場を巻き込むチェンジマネジメント", "次回予告：効果測定と改善"],
+        ],
+      },
+      {
+        titles: [
+          "{theme}の効果測定と改善サイクル｜PDCAを回す実践手法",
+          "導入後が本番｜{theme}の成果を最大化するKPI管理術",
+        ],
+        overviews: ["導入して終わりではない。効果を最大化するためのKPI設計、PDCAの回し方、スケールの判断基準を解説します。"],
+        headings: [
+          ["前回までの振り返り", "KPI設計の実践テンプレート", "定量評価と定性評価の使い分け", "うまくいかない時の軌道修正法", "スケール判断のタイミングと基準", "次回予告：総まとめ"],
+        ],
+      },
+      {
+        titles: [
+          "【総集編】{theme}経営戦略の全体像｜意思決定チェックリスト付き",
+          "【保存版】{theme}×経営｜シリーズ完全まとめ＆戦略テンプレート",
+        ],
+        overviews: ["全4回の内容を体系的に整理した完全保存版。意思決定チェックリスト、ROIテンプレート、導入計画書のフォーマットなど特別コンテンツを収録。"],
+        headings: [
+          ["シリーズ全体の振り返り", "【保存版】導入〜運用チェックリスト", "フェーズ別のKPIテンプレート", "成功企業・失敗企業のケーススタディ", "特別付録：経営会議用プレゼンテンプレート", "最後に：{theme}時代の経営のあり方"],
+        ],
+      },
+    ],
+    nextArticleTexts: [
+      "次回は「導入判断のフレームワーク」を解説します。自社への適用可否を判断するための具体的な指標と、経営会議でそのまま使えるROI試算テンプレートをお伝えします。",
+      "次回は実装フェーズです。導入計画の立て方からベンダー選定、社内体制の構築まで、実務レベルで使える内容をお届けします。",
+      "次回は効果測定と改善サイクルがテーマです。KPI設計から軌道修正の判断基準まで、導入後に最も重要なフェーズを解説します。",
+      "次回はいよいよ最終回。シリーズ全体の総まとめに加え、すぐに使えるテンプレート類を特別収録した保存版です。",
+    ],
+  },
+  "フリーランス志望向け": {
+    magazines: [
+      { title: "{theme}で独立！フリーランスへの道マガジン【全5回】", desc: "会社員から{theme}フリーランスになるまでの完全ロードマップ。学習→副業→独立→安定→飛躍の5ステップを、リアルな体験談とともにお届けします。「いつか独立したい」を「今年独立する」に変えるシリーズです。" },
+    ],
+    articles: [
+      {
+        titles: [
+          "【無料】{theme}フリーランスのリアル｜収入・働き方・始め方",
+          "【無料】{theme}で独立って実際どうなの？現役フリーランスが語る真実",
+        ],
+        overviews: [
+          "{theme}フリーランスの働き方をリアルにお伝えする入門記事。収入の目安、1日のスケジュール、向いている人の特徴まで、独立を考えている方が最初に読むべき1本です。",
+        ],
+        headings: [
+          ["はじめに：なぜこの記事を書くのか", "{theme}フリーランスの収入ぶっちゃけ話", "1日のスケジュールを公開", "【ここまでが無料パート】", "向いている人・向いていない人", "シリーズ全体のご案内"],
+        ],
+        paywallTexts: [
+          "ここまでで{theme}フリーランスのリアルな姿をお伝えしました。\n\n「自分にもできそう」「もっと具体的に知りたい」と思った方は、ぜひ次の記事に進んでください。\n\n有料パートでは、会社員をしながら{theme}スキルを身につけるための具体的な学習プランと、私が実際に使った教材・ツールをすべて公開しています。独立前にここまで準備しておけば、スタートダッシュが切れますよ。",
+        ],
+      },
+      {
+        titles: [
+          "会社員のうちにやる{theme}学習ロードマップ【3ヶ月計画】",
+          "{theme}スキルの身につけ方｜独立前の学習完全ガイド",
+        ],
+        overviews: ["会社員をしながら{theme}を学ぶための3ヶ月ロードマップ。使うべき教材、学習順序、ポートフォリオ作成までを具体的に解説します。"],
+        headings: [
+          ["前回の振り返りと今回のゴール", "3ヶ月学習ロードマップ全体像", "月別の学習内容とマイルストーン", "おすすめ教材・ツール一覧", "ポートフォリオの作り方", "次回予告：副業で実績を作る"],
+        ],
+      },
+      {
+        titles: [
+          "{theme}副業で実績を作る｜最初の案件獲得から月5万まで",
+          "副業{theme}のはじめ方｜案件獲得から納品まで完全ガイド",
+        ],
+        overviews: ["学んだスキルを副業収入につなげる実践ガイド。案件の探し方、提案のコツ、納品の流れまで、最初の1件を獲得するためのすべてを解説します。"],
+        headings: [
+          ["前回までの学習を振り返り", "案件を見つける5つの方法", "選ばれる提案文の書き方", "初案件の進め方と納品のコツ", "副業月5万円を達成するまでの道筋", "次回予告：独立準備編"],
+        ],
+      },
+      {
+        titles: [
+          "{theme}で独立する前にやるべき全準備｜お金・手続き・心構え",
+          "フリーランス独立チェックリスト｜{theme}で食べていくための準備術",
+        ],
+        overviews: ["いよいよ独立に向けた最終準備。退職のタイミング、開業届、保険・年金、貯金目安、税金の基礎など、独立前に必ず知っておくべきことを解説します。"],
+        headings: [
+          ["前回までの成果を確認", "独立前の資金計画と貯金目安", "退職のタイミングと伝え方", "開業届・保険・年金の手続きガイド", "独立後の収入を安定させる仕組み", "次回予告：シリーズ総まとめ"],
+        ],
+      },
+      {
+        titles: [
+          "【総集編】{theme}フリーランス完全ガイド｜ゼロから独立までの全記録",
+          "【保存版】{theme}で独立する全ステップ｜シリーズ総まとめ＆特典付き",
+        ],
+        overviews: ["全4回の内容を凝縮した完全保存版。ロードマップ一覧、チェックリスト、テンプレート集など、総集編だけの特別コンテンツも収録。フリーランスを目指すすべての方の「お守り」となる1本です。"],
+        headings: [
+          ["シリーズ全体の振り返り", "【保存版】独立ロードマップ完全版", "フェーズ別チェックリスト", "特別付録：提案文・契約書テンプレート", "先輩フリーランスからのメッセージ", "おわりに：あなたの挑戦を応援しています"],
+        ],
+      },
+    ],
+    nextArticleTexts: [
+      "次回は学習ロードマップ編です。「何を」「どの順番で」「どれくらい」学べばいいのか、具体的な3ヶ月計画をお伝えします。会社員をしながらでも無理なく進められるプランですよ！",
+      "次回はいよいよ案件獲得編！学んだスキルを実際のお仕事につなげる方法を具体的にお伝えします。「最初の1件」を取るためのテクニック、お楽しみに！",
+      "次回は独立準備編です。お金のこと、手続きのこと、メンタルのこと…独立前に知っておくべきすべてをまとめます。ここまで来たらゴールはすぐそこです！",
+      "次回はいよいよ最終回！シリーズ全体の総まとめに加えて、テンプレート集や特別コンテンツもたっぷり用意しています。お楽しみに！",
+    ],
+  },
+  "副業初心者向け": {
+    magazines: [
+      { title: "ゼロから始める{theme}副業マガジン【全5回】", desc: "副業未経験者が{theme}で月5万円を目指すための完全ロードマップ。準備→学習→初案件→収益安定→応用の5ステップを丁寧に解説します。本業を続けながら、もうひとつの収入の柱を作りましょう。" },
+    ],
+    articles: [
+      {
+        titles: [
+          "【無料】{theme}副業のリアル｜収入・時間・始め方まるわかり",
+          "【無料】副業で{theme}ってどうなの？経験者が語る本音",
+        ],
+        overviews: ["{theme}副業のリアルな姿を、収入額・作業時間・メリットデメリットまで包み隠さず公開。副業を考えている人が最初に読むべき1本です。"],
+        headings: [
+          ["はじめに：なぜ副業に{theme}を選んだのか", "{theme}副業の収入ぶっちゃけ話", "1日のスケジュールを公開", "【ここまでが無料パート】", "副業に向いている人・向いていない人", "シリーズ全体のご案内"],
+        ],
+        paywallTexts: [
+          "ここまでで{theme}副業のリアルな姿をお伝えしました。\n\n「自分にもできそう」と思った方は、次の記事で具体的な始め方をステップバイステップで解説しています。\n\n必要なツール、学習順序、最初の案件の取り方まで、この通りにやれば迷わず進められる内容です。",
+        ],
+      },
+      {
+        titles: ["{theme}副業の始め方｜準備から学習まで完全ガイド", "今日から始める{theme}副業｜最初の1週間でやるべきこと"],
+        overviews: ["必要な環境準備、学習の順序、おすすめ教材まで。{theme}副業をスタートするための完全ガイドです。"],
+        headings: [["前回の振り返りと今回のゴール", "副業を始める前の準備チェックリスト", "効率的な学習ロードマップ", "おすすめ教材・ツールまとめ", "最初の1週間の行動計画", "次回予告：案件獲得のコツ"]],
+      },
+      {
+        titles: ["{theme}副業で初案件を獲得する方法｜提案文テンプレ付き", "最初の1万円を稼ぐ！{theme}副業の案件獲得術"],
+        overviews: ["学んだスキルを収入に変える実践ガイド。案件の探し方、提案文の書き方、納品のコツまで解説します。"],
+        headings: [["前回までの学習を振り返り", "案件を見つける3つの方法", "選ばれる提案文の書き方", "初案件の進め方と納品のコツ", "収入を伸ばすためのポイント", "次回予告：安定化と税金の話"]],
+      },
+      {
+        titles: ["{theme}副業を安定させる｜リピート獲得と確定申告", "副業月5万円を安定させるための{theme}戦略"],
+        overviews: ["単発で終わらせず、安定した副収入にするためのリピート戦略と、避けて通れない税金の基礎知識を解説します。"],
+        headings: [["前回までの道のりを振り返り", "リピーターを獲得するためのコツ", "単価アップの交渉術", "確定申告の基本と会社バレ対策", "副業収入を安定させる仕組み", "次回予告：シリーズ総まとめ"]],
+      },
+      {
+        titles: ["【総集編】{theme}副業完全ガイド｜ゼロから月5万円まで", "【保存版】{theme}副業のすべて｜シリーズ総まとめ＆特典"],
+        overviews: ["全4回の内容を凝縮し、チェックリストやテンプレートも特別収録。副業を続ける限りずっと使える保存版です。"],
+        headings: [["シリーズ全体の振り返り", "【保存版】副業スタートチェックリスト", "よくある質問まとめ", "特別付録：提案文・請求書テンプレート", "副業仲間のコミュニティ紹介", "おわりに：副業で人生の選択肢を増やそう"]],
+      },
+    ],
+    nextArticleTexts: [
+      "次回は具体的な始め方を解説します。準備から学習まで、この通りに進めれば迷いません！",
+      "次回はいよいよ案件獲得編！最初の1万円を稼ぐための具体的な方法をお伝えします。",
+      "次回は副業を安定させるコツと、避けて通れない確定申告の話。知らないと損する内容です！",
+      "次回はシリーズ最終回！総まとめ＋特別テンプレートをお届けします。お楽しみに！",
+    ],
+  },
+  "クリエイター向け": {
+    magazines: [
+      { title: "クリエイターのための{theme}活用マガジン【全5回】", desc: "クリエイターが{theme}を味方につけるための完全ガイド。制作効率アップ、表現の拡張、収益化まで5記事で徹底解説。{theme}をツールとして使いこなし、クリエイティブの可能性を広げましょう。" },
+    ],
+    articles: [
+      {
+        titles: [
+          "【無料】クリエイターが{theme}を無視できない3つの理由",
+          "【無料】{theme}はクリエイターの敵？味方？｜本音で語る",
+        ],
+        overviews: ["クリエイターにとって{theme}は脅威か、チャンスか。実際に制作に取り入れた経験をもとに、本音でお伝えする入門記事です。"],
+        headings: [["はじめに：クリエイターとして感じた危機感", "{theme}がクリエイティブ業界に与える影響", "実際に使ってみて分かったこと", "【ここまでが無料パート】", "オリジナリティとの付き合い方", "シリーズ全体のご案内"]],
+        paywallTexts: ["ここまでで{theme}の全体像とクリエイターとの関係性をお伝えしました。\n\n「もう少し具体的に知りたい」「実際の制作に活かしてみたい」と思った方は、次の記事で制作ワークフローへの具体的な取り入れ方を解説しています。\n\n実践的なテクニックやおすすめツールもすべて公開しています。"],
+      },
+      {
+        titles: ["制作ワークフローに{theme}を組み込む実践ガイド", "{theme}×制作｜効率とクオリティを両立するテクニック"],
+        overviews: ["実際の制作工程に{theme}をどう取り入れるか。効率アップとクオリティ維持を両立する具体的な方法を解説します。"],
+        headings: [["前回のポイント振り返り", "{theme}導入前後のワークフロー比較", "制作フェーズ別の活用テクニック", "クオリティを落とさないためのルール", "おすすめツール・サービスまとめ", "次回予告：発信とブランディング"]],
+      },
+      {
+        titles: ["{theme}×SNS発信｜クリエイターのブランディング戦略", "作品を届ける力を{theme}で強化する方法"],
+        overviews: ["作品を作るだけでは食べていけない時代。{theme}を活用した発信とブランディング戦略で、あなたの作品をもっと多くの人に届けましょう。"],
+        headings: [["前回までの振り返り", "クリエイターに発信力が必要な理由", "{theme}を使ったSNS運用テクニック", "ポートフォリオの強化法", "ファンを増やすコンテンツ戦略", "次回予告：収益化の方法"]],
+      },
+      {
+        titles: ["{theme}でクリエイターの収入を多角化する方法", "作品だけじゃない！{theme}で広がるクリエイターの収入源"],
+        overviews: ["制作案件だけに頼らない収入の作り方。{theme}を活用した新しい収益化モデルを提案します。"],
+        headings: [["前回までの道のりを振り返り", "クリエイターの収入源マップ", "{theme}スキルを活かした新しい収益モデル", "単価アップのための戦略", "長く活動するためのバランス管理", "次回予告：シリーズ総まとめ"]],
+      },
+      {
+        titles: ["【総集編】クリエイターのための{theme}完全ガイド", "【保存版】{theme}×クリエイター｜シリーズ総まとめ"],
+        overviews: ["全4回の内容を凝縮し、クリエイター向けチェックリストやワークフローテンプレートも特別収録した完全保存版です。"],
+        headings: [["シリーズ全体の振り返り", "【保存版】{theme}活用チェックリスト", "ジャンル別の活用アイデア集", "特別付録：ワークフローテンプレート", "クリエイター仲間の成功事例", "おわりに：クリエイティブの未来は明るい"]],
+      },
+    ],
+    nextArticleTexts: [
+      "次回は実践編！{theme}を制作ワークフローに組み込む具体的なテクニックをお伝えします。",
+      "次回は発信とブランディング編。作品を作るだけじゃもったいない。届ける力を身につけましょう！",
+      "次回は収益化編！クリエイターの収入を多角化する方法をお伝えします。",
+      "次回はいよいよ最終回！シリーズ総まとめ＋特別テンプレートをお届けします。",
+    ],
+  },
+  "会社員向け": {
+    magazines: [
+      { title: "会社員のための{theme}キャリアアップマガジン【全5回】", desc: "忙しい会社員が{theme}を学び、本業に活かし、キャリアの可能性を広げるための完全ガイド。通勤時間や昼休みを活用した学習法から、社内評価アップ、転職市場での価値向上まで5記事で解説します。" },
+    ],
+    articles: [
+      {
+        titles: [
+          "【無料】会社員が{theme}を学ぶべき理由｜キャリアが変わる",
+          "【無料】{theme}を知っている会社員と知らない会社員の差",
+        ],
+        overviews: ["なぜ今、会社員に{theme}のスキルが求められているのか。キャリアへのインパクトをデータと体験談でお伝えする入門記事です。"],
+        headings: [["はじめに：普通の会社員だった私が変わったきっかけ", "会社員に{theme}が必要な3つの理由", "学ぶことで何が変わるのか", "【ここまでが無料パート】", "向いている人・まだ早い人", "シリーズ全体のご案内"]],
+        paywallTexts: ["ここまでで{theme}の重要性をお伝えしました。\n\n「じゃあ具体的にどうやって学べばいいの？」と思った方は、次の記事で忙しい会社員向けの効率的な学習法を解説しています。\n\n通勤時間や昼休みを活用した方法なので、今の生活リズムを崩さず始められますよ。"],
+      },
+      {
+        titles: ["忙しい会社員のための{theme}学習法｜通勤時間を活用", "1日30分で{theme}をマスター｜会社員向け学習プラン"],
+        overviews: ["限られた時間で効率よく{theme}を学ぶ方法。通勤時間、昼休み、帰宅後を活用した実践的な学習プランを公開します。"],
+        headings: [["前回の振り返りと今回のゴール", "すきま時間学習のフレームワーク", "通勤・昼休み・帰宅後の活用法", "おすすめ学習リソース一覧", "1ヶ月の学習カレンダー例", "次回予告：本業への活かし方"]],
+      },
+      {
+        titles: ["{theme}を本業に活かす！明日から使える実践テクニック", "社内評価が上がる{theme}の使い方｜会社員の実践ガイド"],
+        overviews: ["学んだ{theme}スキルを日々の業務に活かす具体的な方法。業務効率化、企画提案、チーム内での評価アップに直結するテクニックを紹介します。"],
+        headings: [["前回までの学習を振り返り", "業務効率化に使える{theme}テクニック5選", "上司に刺さる企画提案の作り方", "チーム内での知識共有の方法", "実践で気をつけるべきポイント", "次回予告：キャリア戦略"]],
+      },
+      {
+        titles: ["{theme}スキルでキャリアアップ｜転職・昇進・副業の可能性", "{theme}が会社員のキャリアを変える｜次のステージへの戦略"],
+        overviews: ["{theme}スキルを武器にしたキャリア戦略。転職市場での価値向上、社内昇進のアピール方法、副業への展開まで解説します。"],
+        headings: [["前回までの振り返り", "転職市場での{theme}スキルの価値", "社内昇進に活かすアピール術", "副業としての{theme}活用", "キャリアプランの描き方", "次回予告：シリーズ総まとめ"]],
+      },
+      {
+        titles: ["【総集編】会社員のための{theme}完全ガイド｜学習からキャリアアップまで", "【保存版】{theme}×会社員｜シリーズ総まとめ＆実践チェックリスト"],
+        overviews: ["全4回の内容を凝縮し、学習チェックリスト・業務活用テンプレート・キャリアプランシートなど特別コンテンツを収録した完全保存版です。"],
+        headings: [["シリーズ全体の振り返り", "【保存版】学習〜実践チェックリスト", "業務シーン別{theme}活用集", "特別付録：キャリアプランシート", "読者の成功体験シェア", "おわりに：学び続ける会社員は最強"]],
+      },
+    ],
+    nextArticleTexts: [
+      "次回は具体的な学習法を解説します。通勤時間や昼休みを使った方法なので、忙しくても大丈夫！",
+      "次回は本業への活かし方！明日から使える実践テクニックをお伝えします。",
+      "次回はキャリア戦略編。{theme}スキルを転職・昇進・副業にどう活かすか解説します！",
+      "次回はいよいよ最終回！シリーズ総まとめ＋特別チェックリストをお届けします。",
+    ],
+  },
+};
+
+// ── Utility ──
+function getAudience() {
+  return document.querySelector('input[name="audience"]:checked').value;
+}
+function pickRandom(arr, count) {
+  const shuffled = [...arr].sort(() => Math.random() - .5);
+  return shuffled.slice(0, count || 1);
+}
+function pick1(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function T(str, theme) { return str.replace(/\{theme\}/g, theme); }
+
+function showToast(msg) {
+  const toast = document.getElementById('copyToast');
+  toast.textContent = msg || 'コピーしました！';
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function hideAllViews() {
+  ['results', 'articleView', 'seriesResults', 'seriesArticleView'].forEach(id =>
+    document.getElementById(id).classList.remove('show')
+  );
+}
+
+function backToForm() {
+  hideAllViews();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Single article mode ──
+let generatedArticles = [];
+
+function generate() {
+  const theme = document.getElementById('theme').value.trim();
+  if (!theme) {
+    document.getElementById('theme').focus();
+    document.getElementById('theme').style.borderColor = '#e91e63';
+    setTimeout(() => document.getElementById('theme').style.borderColor = '#f8bbd0', 1500);
+    return;
+  }
+
+  const audience = getAudience();
+  const data = templates[audience];
+
+  const btn = document.getElementById('generateBtn');
+  const loading = document.getElementById('loading');
+
+  btn.disabled = true;
+  hideAllViews();
+  document.getElementById('loadingText').textContent = 'アイデアを考えています...';
+  loading.classList.add('show');
+
+  setTimeout(() => {
+    const chosenTitles = pickRandom(data.titles, 3);
+    const chosenHeadings = pickRandom(data.headings, 3);
+
+    generatedArticles = [];
+    let html = '';
+
+    chosenTitles.forEach((t, i) => {
+      const title = t.replace(/\{theme\}/g, theme);
+      const heads = chosenHeadings[i].map(h => h.replace(/\{theme\}/g, theme));
+      generatedArticles.push({ title, headings: heads, audience, theme });
+
+      html += `
+        <div class="article-card">
+          <div class="card-top"><span class="num">${i + 1}</span></div>
+          <h3>${title}</h3>
+          <ul>${heads.map(h => `<li>${h}</li>`).join('')}</ul>
+          <div class="write-btn-wrap">
+            <button class="btn-sm" onclick="writeArticle(${i})">&#x270D;&#xFE0F; この記事を書く</button>
+          </div>
+        </div>`;
+    });
+
+    document.getElementById('resultMeta').textContent = `テーマ「${theme}」× ${audience}`;
+    document.getElementById('articleList').innerHTML = html;
+
+    loading.classList.remove('show');
+    document.getElementById('results').classList.add('show');
+    btn.disabled = false;
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 1200);
+}
+
+// ── Write single article ──
+function generateBody(article) {
+  const { title, headings, audience, theme } = article;
+  const tmpl = bodyTemplates[audience];
+  // New paywall: free = empathy(0) + problem(1), paid = solution(2) onwards
+  // Cut after index 1 so "continue reading" hits right when solution starts
+  const paywallAfter = 2;
+  let sections = [];
+
+  // Map heading index to article structure role
+  // 0: empathy/intro, 1: problem, 2: solution, 3: experience, 4: experience/deep, 5: closing
+  headings.forEach((heading, idx) => {
+    let category;
+    if (idx === 0) category = 'intro';
+    else if (idx === 1) category = 'middle'; // problem section
+    else if (idx === headings.length - 1) category = 'closing';
+    else if (heading.includes('スケジュール') || heading.includes('タイム') || heading.includes('プラン') || heading.includes('手順') || heading.includes('ステップ') || heading.includes('導入') || heading.includes('カリキュラム'))
+      category = 'schedule';
+    else if (idx === 2 || idx === 3) category = 'deep'; // solution + experience
+    else category = 'middle';
+
+    const pool = tmpl[category] || tmpl['middle'] || tmpl['deep'];
+    const text = pool[Math.floor(Math.random() * pool.length)];
+    sections.push({ heading, body: text.replace(/\{theme\}/g, theme), isPaid: idx >= paywallAfter });
+  });
+  return sections;
+}
+
+function writeArticle(index) {
+  const article = generatedArticles[index];
+  if (!article) return;
+
+  hideAllViews();
+  const loading = document.getElementById('loading');
+  document.getElementById('loadingText').textContent = '記事を執筆しています...';
+  loading.classList.add('show');
+
+  setTimeout(() => {
+    const sections = generateBody(article);
+    let paywallInserted = false;
+    let bodyHtml = '';
+
+    // Build the paid headings preview for the paywall teaser
+    const paidHeadings = sections.filter(s => s.isPaid).map(s => s.heading);
+    const teaserList = paidHeadings.length ? paidHeadings.map(h => '- ' + h).join('<br>') : '';
+
+    sections.forEach((sec) => {
+      if (sec.isPaid && !paywallInserted) {
+        paywallInserted = true;
+        bodyHtml += `
+          <div class="paywall-divider">
+            <div class="lock">&#x1F512;</div>
+            <p>ここから先は有料パートです</p>
+            <div class="note" style="margin-top:8px;text-align:left;font-size:13px;line-height:1.8">
+              ここから先では、具体的な解決策・実際のステップ・テンプレートなどをすべて公開しています。<br><br>
+              <strong>有料パートの内容：</strong><br>
+              ${teaserList}<br><br>
+              <span style="color:#ad1457">（noteでは「ここから有料」ラインをこの位置に設定します）</span>
+            </div>
+          </div>`;
+      }
+      bodyHtml += `
+        <div class="article-section">
+          <h3>${sec.heading}</h3>
+          <div class="body-text">${sec.body}</div>
+        </div>`;
+    });
+
+    document.getElementById('articleViewTitle').textContent = article.title;
+    document.getElementById('articleViewBody').innerHTML = bodyHtml;
+
+    let plainText = article.title + '\n\n';
+    sections.forEach((sec, i) => {
+      if (sec.isPaid && !sections[i-1]?.isPaid) plainText += '\n---（ここから有料）---\n\n';
+      plainText += '## ' + sec.heading + '\n\n' + sec.body + '\n\n';
+    });
+    document.getElementById('articleView').dataset.plainText = plainText;
+
+    loading.classList.remove('show');
+    document.getElementById('articleView').classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 2000);
+}
+
+function backToResults() {
+  document.getElementById('articleView').classList.remove('show');
+  document.getElementById('results').classList.add('show');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function copyArticle() {
+  const text = document.getElementById('articleView').dataset.plainText;
+  navigator.clipboard.writeText(text).then(() => showToast());
+}
+
+// ── Series mode ──
+let seriesPlainText = '';
+let generatedSeriesArticles = [];
+
+function generateSeries() {
+  const theme = document.getElementById('theme').value.trim();
+  if (!theme) {
+    document.getElementById('theme').focus();
+    document.getElementById('theme').style.borderColor = '#e91e63';
+    setTimeout(() => document.getElementById('theme').style.borderColor = '#f8bbd0', 1500);
+    return;
+  }
+
+  const audience = getAudience();
+  const st = seriesTemplates[audience];
+
+  const btn = document.getElementById('generateBtn');
+  const loading = document.getElementById('loading');
+
+  btn.disabled = true;
+  hideAllViews();
+  document.getElementById('loadingText').textContent = 'シリーズ構成を設計しています...';
+  loading.classList.add('show');
+
+  setTimeout(() => {
+    const magazine = pick1(st.magazines);
+    const prices = ['無料', '¥980', '¥980', '¥980', '¥1,980'];
+    const epLabels = ['第1回（無料・集客用）', '第2回（有料）', '第3回（有料）', '第4回（有料）', '第5回（まとめ・有料）'];
+    const epClasses = ['free', 'premium', 'premium', 'premium', 'final'];
+    const priceTagClasses = ['free-tag', '', '', '', ''];
+
+    let html = '';
+    seriesPlainText = '';
+    generatedSeriesArticles = [];
+
+    // Magazine header
+    const magTitle = T(magazine.title, theme);
+    const magDesc = T(magazine.desc, theme);
+    html += `
+      <div class="series-magazine">
+        <div class="mag-icon">&#x1F4DA;</div>
+        <h2>${magTitle}</h2>
+        <div class="mag-desc">${magDesc}</div>
+      </div>`;
+
+    seriesPlainText += `=== マガジン ===\n${magTitle}\n\n${magDesc}\n\n`;
+
+    // Each article
+    st.articles.forEach((art, i) => {
+      const title = T(pick1(art.titles), theme);
+      const overview = T(pick1(art.overviews), theme);
+      const headings = pick1(art.headings).map(h => T(h, theme));
+
+      // connector arrow between cards
+      if (i > 0) {
+        html += `<div class="series-connector">&#x25BC;</div>`;
+      }
+
+      html += `<div class="series-card">`;
+      html += `<div class="series-card-header">
+        <span class="ep-num ${epClasses[i]}">${epLabels[i]}</span>
+        <span class="price-tag ${priceTagClasses[i]}">${prices[i]}</span>
+      </div>`;
+      html += `<h3>${title}</h3>`;
+      html += `<div class="overview">${overview}</div>`;
+      html += `<ul>${headings.map(h => `<li>${h}</li>`).join('')}</ul>`;
+
+      // Store for writeSeriesArticle
+      generatedSeriesArticles.push({ title, headings, overview, audience, theme, isFree: i === 0, isFinal: i === 4, episodeLabel: epLabels[i], price: prices[i] });
+
+      // Write button
+      html += `<div class="write-btn-wrap" style="text-align:right;margin-top:12px;">
+        <button class="btn-sm" onclick="writeSeriesArticle(${i})">&#x270D;&#xFE0F; この記事を書く</button>
+      </div>`;
+
+      seriesPlainText += `--- ${epLabels[i]}（${prices[i]}）---\n`;
+      seriesPlainText += `${title}\n\n`;
+      seriesPlainText += `概要：${overview}\n\n`;
+      seriesPlainText += `見出し構成：\n${headings.map(h => '  - ' + h).join('\n')}\n\n`;
+
+      // Free article: paywall suggestion + CTA
+      if (i === 0 && art.paywallTexts) {
+        const pwHeading = headings.find(h => h.includes('無料パート')) || headings[2];
+        const paywallText = T(pick1(art.paywallTexts), theme);
+        html += `
+          <div class="paywall-suggestion">
+            <div class="pw-label">&#x1F512; 有料ラインの提案</div>
+            <div class="pw-text">「${pwHeading}」の後ろで有料ラインを引くのがおすすめです。\n無料パートで価値を感じてもらい、「もっと知りたい」を引き出しましょう。</div>
+          </div>`;
+        html += `
+          <div class="cta-box">
+            <div class="cta-label">&#x1F4E3; 有料記事への誘導文（案）</div>
+            <div class="cta-text">${paywallText}</div>
+          </div>`;
+
+        seriesPlainText += `有料ライン：「${pwHeading}」の後ろで設定\n\n`;
+        seriesPlainText += `誘導文：\n${paywallText}\n\n`;
+      }
+
+      // Next article CTA (except last)
+      if (i < 4) {
+        const nextText = T(st.nextArticleTexts[i], theme);
+        html += `
+          <div class="cta-box">
+            <div class="cta-label">&#x27A1;&#xFE0F; 次の記事への導線文</div>
+            <div class="cta-text">${nextText}</div>
+          </div>`;
+        seriesPlainText += `次の記事への導線：\n${nextText}\n\n`;
+      }
+
+      html += `</div>`;
+    });
+
+    document.getElementById('seriesContent').innerHTML = html;
+
+    loading.classList.remove('show');
+    document.getElementById('seriesResults').classList.add('show');
+    btn.disabled = false;
+    document.getElementById('seriesResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 1800);
+}
+
+function copySeriesPlan() {
+  navigator.clipboard.writeText(seriesPlainText).then(() => showToast());
+}
+
+// ── Write series article ──
+const seriesBodyPool = {
+  "ママ向け": {
+    intro: [
+      `こんにちは！この記事を開いてくださって、本当にありがとうございます。\n\n毎日の家事に育児に、本当にお疲れさまです。「自分の時間なんてほとんどない…」「でも、何か新しいことを始めてみたい…」そんな気持ち、すごくよく分かります。\n\n私自身、子どもが1歳のときに{theme}と出会いました。最初は「こんな私にできるのかな」って不安でいっぱいだったんです。でもね、一歩踏み出してみたら、世界がガラッと変わりました。\n\nこの記事では、忙しいママでも無理なく{theme}を始められるように、私の実体験をもとにお伝えしていきますね。`,
+      `はじめまして！この記事に来てくださって、ありがとうございます。\n\nきっと「{theme}ってどうなんだろう」「自分にもできるのかな」って思いながら読んでくださっていますよね。\n\n実は、私もまったく同じ気持ちからスタートしました。子どもの寝かしつけが終わった夜、なんとなくスマホで検索して{theme}に出会ったんです。\n\nあれから数年。今ではすっかり生活の一部になりました。この記事では、その経験をもとに、ママだからこそ知ってほしいことをお伝えしていきますね。`,
+    ],
+    recap: [
+      `前回の記事、読んでくださいましたか？\n\nまだの方のためにざっくりおさらいすると、{theme}の基本的な考え方と、なぜママにこそおすすめなのかをお話ししました。\n\n「なるほど、ちょっと面白そうかも」と思ってくださった方、今回はさらに一歩踏み込んだ内容をお届けします。\n\n前回は「知る」がテーマでしたが、今回は「やってみる」がテーマ。読み終わった後に、すぐに行動に移せるように具体的にお伝えしていきますね。\n\nお茶でも用意して、リラックスしながら読んでください。`,
+      `シリーズを続けて読んでくださっている方、ありがとうございます！\n\n前回までの内容をざっくり振り返ると、{theme}の全体像をお伝えし、「ママでも始められるんだ」と感じていただけたかなと思います。\n\n今回からはいよいよ実践的な内容に入っていきます。「読んで終わり」じゃなく「やってみよう」がゴールです。\n\n具体的なステップを順番にお伝えしていくので、自分のペースで進めてくださいね。焦る必要はまったくありません。`,
+    ],
+    practical: [
+      `さて、ここからが本題です。\n\n{theme}で実際に成果を出すために、私が特に大切だと感じている具体的な方法をお伝えしますね。\n\nまず最初にやってほしいのが「目標の細分化」です。いきなり大きな目標を掲げると、達成できなくて落ち込んじゃうんですよね。（経験済みです…笑）\n\nおすすめは「今週やること」を3つだけ決めること。それ以上は欲張らない。例えば：\n\n1. {theme}の基本をYouTubeで30分学ぶ\n2. ノートに学んだことを3行でまとめる\n3. SNSで{theme}について1投稿する\n\nこれだけでOK。「え、こんなに少なくていいの？」と思いますよね。でもね、この小さな積み重ねが3ヶ月後に大きな差になるんです。\n\n実際に私もこの方法で、無理なく{theme}のスキルを身につけました。ママは完璧主義になりがちだけど、70点でいい。続けることが一番の才能です。`,
+      `ここは具体的なテクニックの話をしますね。メモの準備はOKですか？\n\n{theme}で結果を出すために、私が何度も試行錯誤して見つけた方法があります。\n\n一番大事なのは「インプットとアウトプットのバランス」。多くの人が陥るのが、インプットばかりして手が動かないパターン。気持ちはすごく分かります。もっと勉強してからじゃないと不安ですよね。\n\nでも、私の経験では「3割インプット・7割アウトプット」くらいがちょうどいいです。\n\n具体的には：\n- 月曜〜水曜：新しいことを学ぶ（本、動画、記事）\n- 木曜〜日曜：学んだことを実際にやってみる\n\nやってみると「あ、ここが分からない」が見つかります。それがまた学びになる。このサイクルが回り始めると、成長のスピードが一気に上がりますよ。\n\n焦らなくて大丈夫。あなたのペースでこのサイクルを回していきましょう。`,
+    ],
+    tools: [
+      `ここでは、私が実際に使っているツールやサービスを紹介しますね。\n\n{theme}を効率よく進めるには、ツール選びが意外と重要です。最初から有料ツールに手を出す必要はなくて、無料で使えるものから始めればOK。\n\n【無料で使えるおすすめツール】\n\n1つ目は、学習の記録に使えるノートアプリ。NotionやGoogleドキュメントがおすすめです。学んだことをサッとメモできるのが大事。\n\n2つ目は、タスク管理ツール。Googleカレンダーに「{theme}の時間」をブロックするだけでも効果抜群です。見える化すると「やらなきゃ」が「やりたい」に変わります。\n\n3つ目は、コミュニティ。SNSで「#{theme}」で検索すると、同じ目標を持つ仲間が見つかります。ひとりで頑張るより、仲間がいた方が絶対に続きます。\n\n全部無料なので、まずは今日中にひとつだけセットアップしてみてくださいね。`,
+      `おすすめのツールとサービスについて、実体験ベースでお話ししますね。\n\n{theme}を始めた頃、私は何でもかんでも情報を集めすぎて、逆に混乱していました。「結局、何を使えばいいの！？」って（笑）。\n\nなので、ここでは本当に使ってよかったものだけを厳選してご紹介します。\n\nまずは情報整理。私はNotionを使っていますが、正直なんでもOK。大事なのは「一箇所にまとめる」こと。あちこちにメモがあると、後から探すのが大変です。\n\n次に作業環境。{theme}の作業をする「定位置」を決めましょう。ダイニングテーブルの一角でもOK。「ここに座ったら{theme}モード」という切り替えが効果的です。\n\nそして学習教材。まずは無料のYouTube動画から始めて、方向性が定まったら書籍を1〜2冊。いきなり高額な講座に申し込む必要はありません。\n\nまずは「身軽に始めること」が最優先。あとから必要なものを追加していけば大丈夫です。`,
+    ],
+    monetize: [
+      `お待たせしました。みんなが一番気になる「お金の話」をしますね。\n\n「{theme}って、本当にお金になるの？」「どうやって最初の収入を得るの？」\n\nすごく分かります。私も最初は半信半疑でした。\n\nでも、結論から言うと、{theme}はきちんと収益化できます。ただし、正しい順番でやることが大切。\n\n【収益化の3ステップ】\n\nステップ1：まずは実績を作る（最初は低単価でOK）\nステップ2：実績をもとにポートフォリオを作る\nステップ3：ポートフォリオを見せながら営業する\n\n「え、営業なんてできない…」と思いましたか？ 安心してください。SNSで発信しているだけでも、お声がかかることがあります。私の最初の案件も、SNSの投稿を見た方からのDMでした。\n\n大事なのは「私にはまだ早い」と思わないこと。学びながら実践、実践しながら学ぶ。このサイクルが収益化への最短ルートです。\n\n具体的な金額感で言うと、最初の3ヶ月で月1〜3万円、半年後には月5万円が現実的な目標ラインですよ。`,
+      `収益化について、リアルな話をしていきますね。\n\n{theme}で最初のお金をもらうまでの道のり、正直に言うと簡単ではありません。でも、正しいステップを踏めば、着実に近づけます。\n\nまずやってほしいのが「自分にできることの棚卸し」です。{theme}を学んできて、今の自分にできることを書き出してみてください。完璧じゃなくてOK。「ちょっとならできるかも」レベルでいいんです。\n\n次に、それを必要としている人を見つけます。SNSやクラウドソーシングサイトを覗いてみてください。「こんなことで困ってる人がいるんだ」「これなら私にもできそう」というマッチングが見つかるはず。\n\n最初の1件は、友人や知人に頼むのも全然アリです。私の初案件は、ママ友からの「ちょっとお願いできる？」でした（笑）。\n\n大事なのは「お金をもらう経験」をすること。金額の大小じゃなく、「自分のスキルに価値がある」と実感することが、次のステップへの原動力になります。`,
+    ],
+    levelup: [
+      `基礎を身につけたあなたは、もう「初心者」じゃありません。\n\nここからは、次のレベルに進むための戦略をお伝えしますね。\n\nまず考えてほしいのが「自分の強み」の明確化です。{theme}をやっている人はたくさんいます。その中で「あなたに頼みたい」と思ってもらうには、差別化が必要です。\n\nでもね、これってそんなに難しいことじゃないんです。ママであること自体が、立派な差別化ポイント。\n\n例えば：\n- 子育て経験を活かした目線\n- ママコミュニティとのつながり\n- 限られた時間で成果を出す効率力\n- 共感力やコミュニケーション力\n\nこれらは{theme}の世界で、他の人にはない「あなただけの武器」になります。\n\n単価を上げるコツは、「何でもやります」じゃなく「これが得意です」と言えること。専門性を絞ると、逆に仕事が増えるんです。不思議ですよね。でも本当です。\n\n次のステージに進む準備、できていますよ。自信を持ってくださいね。`,
+      `ここからはステップアップの話です。\n\n{theme}の基礎ができて、少しずつ収入も得られるようになってきた。「でも、もうちょっと効率よくできないかな」「もっと単価を上げたいな」そう思い始めているのではないでしょうか。\n\nそれ、すごく健全な成長のサインです。\n\n単価アップのために私が実践したのは「パッケージ化」です。\n\n単発のお仕事をバラバラに受けるのではなく、「{theme}のこの部分を、この流れで、これくらいの期間で提供します」とまとめること。お客様にとっても分かりやすいし、こちらも効率が上がります。\n\n例えば：\n- 単発：1件3,000円の作業\n- パッケージ：3件セット10,000円（1件あたり約3,300円+α）\n\nお客様は「まとめて任せられて楽」、あなたは「まとまった収入になる」。Win-Winですよね。\n\nもうひとつ大切なのが「断る勇気」。すべての依頼を受ける必要はありません。自分の得意分野に集中することで、質も効率も上がります。`,
+    ],
+    summary: [
+      `シリーズをここまで読んでくださって、本当にありがとうございます。\n\nこの最終回では、これまでの内容を全部まとめて、さらに特別なコンテンツもお届けしますね。\n\n振り返ってみると、このシリーズでお伝えしてきたのは：\n\n第1回：{theme}ってなに？（全体像を知る）\n第2回：始めるための準備（環境を整える）\n第3回：収益化の方法（お金につなげる）\n第4回：ステップアップ（さらに成長する）\n\nそして今回の最終回では、これらを凝縮した「保存版」をお届けします。\n\nこの記事をブックマークしておけば、迷ったときにいつでも立ち返れるガイドになるはずです。\n\nさあ、最後まで一緒に走りましょう！`,
+      `いよいよ最終回です。\n\nここまでシリーズを読み続けてくださったあなた、本当にすごいです。「読む」という行動を続けられている時点で、もう一歩を踏み出しているんですよ。\n\n今回は、シリーズ全体のエッセンスを凝縮しつつ、最終回だけの特別コンテンツもご用意しました。\n\nこの記事が、あなたにとって{theme}の「お守り」のような存在になれたら嬉しいです。不安になったとき、迷ったとき、この記事を開いてみてください。\n\nでは最後のレッスン、始めましょう。`,
+    ],
+    checklist: [
+      `ここでは、シリーズ全体で学んだことをチェックリストにまとめました。\n\n保存して、定期的に見返してくださいね。\n\n【{theme}スタートチェックリスト】\n- {theme}の基本的な概念を理解した\n- 自分の「なぜやるのか」を明確にした\n- 必要なツール・環境を準備した\n- 1日のスケジュールに{theme}の時間を組み込んだ\n- 小さな目標を3つ設定した\n- SNSで情報収集・発信を始めた\n\n【収益化チェックリスト】\n- ポートフォリオを作成した\n- クラウドソーシングに登録した\n- 最初の1件に応募・提案した\n- 自分の強み・差別化ポイントを言語化した\n- 価格設定の基準を決めた\n\n全部にチェックが入らなくても大丈夫。上から順番に、ひとつずつ進めていきましょう。\n\nチェックが増えるたびに、自分の成長を実感できるはずです。`,
+    ],
+    finalMessage: [
+      `最後に、ここまで読んでくださったあなたに伝えたいことがあります。\n\n{theme}を通じて私が一番得たもの。それは「自分にもできることがある」という自信です。\n\n子育てに追われて、自分のことを後回しにしていた日々。「ママだから仕方ない」と諦めかけていた夢。{theme}と出会って、少しずつ取り戻していきました。\n\n収入が増えたことも嬉しかったけれど、それ以上に「自分の名前で仕事ができる」喜びが大きかった。\n\nあなたにも、きっとそんな瞬間が訪れます。\n\nうまくいかない日もあるでしょう。子どもの体調不良で計画が崩れる日も、「やっぱり私には無理かも」と思う夜もあるでしょう。\n\nでもね、そう思いながらもこの記事を読んでいるあなたは、もう十分すごいんです。\n\nあなたの挑戦を、心から応援しています。\n\n一緒にがんばりましょうね。いつでもここに戻ってきてください。`,
+    ],
+  },
+  "経営者向け": {
+    intro: [
+      `本記事をお読みいただきありがとうございます。\n\n近年、{theme}は経営における重要テーマとして注目を集めています。しかし「話題は知っているが、自社にどう取り入れればいいのか分からない」という経営者の方が多いのが実情です。\n\n本記事では、経営者が押さえるべき{theme}のポイントを、具体的な事例とデータを交えて解説します。限られた時間で全体像を掴めるよう、要点を絞ってお伝えします。`,
+    ],
+    recap: [
+      `前回の記事では、{theme}の市場概況と経営インパクトの全体像をお伝えしました。\n\n「自社にも関係がありそうだ」と感じていただけたでしょうか。\n\n今回はさらに踏み込み、具体的な判断基準と実践的なフレームワークをご紹介します。\n\n前回の記事をまだお読みでない方は、先にそちらを読んでいただくと今回の内容がより理解しやすくなります。では本題に入りましょう。`,
+    ],
+    practical: [
+      `ここからは実務レベルの話に入ります。\n\n{theme}の導入を検討する際、最初に行うべきは「現状の課題マッピング」です。\n\n以下の3つの問いに答えてみてください：\n\n1. 現在の業務で最もボトルネックになっている部分はどこか？\n2. そのボトルネックに{theme}を適用した場合、改善の余地はあるか？\n3. 改善による経済的インパクトはどの程度か？\n\nこの3つの問いに明確に答えられる場合、{theme}導入の検討フェーズに進む価値があります。\n\n次に重要なのが「スモールスタートの設計」です。全社導入をいきなり行うのではなく、特定部門・特定業務に絞ったパイロット導入から始めましょう。\n\nパイロットの期間は2〜3ヶ月が目安。この間にKPIを設定し、定量的に効果を測定します。ここで得られたデータが、全社展開の判断材料になります。`,
+    ],
+    tools: [
+      `{theme}に関連するツール・ソリューションの選定は、経営判断の重要な要素です。\n\n選定時に確認すべきポイントを整理します。\n\n【必須チェック項目】\n- 初期費用と月額費用の内訳\n- 導入にかかる期間と社内リソース\n- 既存システムとの連携可否\n- サポート体制（日本語対応含む）\n- セキュリティ基準の適合性\n\n中小企業の場合、「機能の豊富さ」よりも「導入のしやすさ」と「サポートの手厚さ」を重視することをお勧めします。高機能なツールも使いこなせなければ投資対効果は出ません。\n\nまた、「無料トライアル」のあるサービスを優先的に検討しましょう。実際に触ってみないと分からないことが多いためです。`,
+    ],
+    monetize: [
+      `ROIの試算について具体的にお伝えします。\n\n{theme}への投資を経営会議で議論する際、感覚的な議論ではなく数値ベースの判断が求められます。\n\n基本的なROI試算のフレームワークは以下の通りです：\n\n【コスト項目】\n- ツール・サービスの利用料\n- 人件費（導入推進担当の工数）\n- 教育・研修コスト\n- 外部コンサルティング費用（必要な場合）\n\n【期待効果項目】\n- 業務効率化による工数削減（時間×単価で算出）\n- 売上向上への寄与（CVR改善、LTV向上など）\n- リスク低減効果（定性的に評価）\n\n一般的に、{theme}の導入効果が現れ始めるのは3〜6ヶ月後です。初年度はコストが先行しますが、2年目以降は投資回収フェーズに入るケースが多いです。\n\n焦って短期の成果を求めすぎないことが、経営判断としては重要です。`,
+    ],
+    levelup: [
+      `導入後の改善サイクルについて解説します。\n\n{theme}は「導入して終わり」ではなく、継続的な改善が成果を最大化します。\n\n効果的なPDCAサイクルの回し方：\n\n【Plan】月次で改善目標を設定\n- KPIの進捗確認\n- 課題の優先順位付け\n- 次月のアクション計画策定\n\n【Do】計画に基づく実行\n- 担当者ごとのタスク明確化\n- 週次の進捗チェック\n\n【Check】データに基づく効果検証\n- 定量KPIの達成度評価\n- 現場ヒアリング（定性評価）\n\n【Act】改善アクションの実施\n- うまくいった施策の横展開\n- うまくいかなかった施策の原因分析と修正\n\nこのサイクルを3ヶ月回せば、自社にとっての最適な運用方法が見えてきます。スケール判断はそこからでも遅くありません。`,
+    ],
+    summary: [
+      `本シリーズの最終回として、全体の内容を体系的に整理します。\n\nシリーズ全体を通じてお伝えしてきたのは以下の流れです：\n\n第1回：{theme}の市場概況と経営インパクト\n第2回：導入判断のフレームワークとROI試算\n第3回：実装ステップと社内体制構築\n第4回：効果測定と改善サイクル\n\nそして今回は、これらを凝縮した保存版としてお届けします。\n\n経営者の方にとって、本シリーズが{theme}に関する意思決定の一助となれば幸いです。`,
+    ],
+    checklist: [
+      `{theme}導入の意思決定チェックリストをまとめます。\n\n【導入前の確認事項】\n- 解決すべき経営課題が明確である\n- {theme}がその課題に有効である根拠がある\n- 初期投資と運用コストの試算ができている\n- ROIの見通し（回収期間含む）を立てている\n- 社内に推進責任者を設定できる\n\n【導入時の確認事項】\n- パイロット対象の部門・業務を選定した\n- KPI（定量・定性）を設計した\n- パイロット期間を決定した（推奨：2〜3ヶ月）\n- 撤退基準を設けた\n\n【運用時の確認事項】\n- 月次のPDCAサイクルが回っている\n- 定量データに基づく効果検証ができている\n- 現場からのフィードバック収集の仕組みがある\n\nこのチェックリストを経営会議の資料に添付することで、議論の精度が上がります。`,
+    ],
+    finalMessage: [
+      `最後までお読みいただきありがとうございます。\n\n{theme}は、正しく導入すれば確実に経営の競争力を高める手段となります。\n\n大切なのは、流行に乗ることではなく、自社の経営課題に照らして冷静に判断すること。本シリーズが、その判断の一助になれば幸いです。\n\n{theme}に関するご質問やご相談があれば、コメント欄よりお気軽にお寄せください。\n\n御社の更なる発展を心よりお祈り申し上げます。`,
+    ],
+  },
+  "フリーランス志望向け": {
+    intro: [
+      `この記事を開いてくれたあなた、ありがとうございます。\n\n「いつか独立したい」「フリーランスってどうなんだろう」そんな気持ちでここにたどり着いたのではないでしょうか。\n\n私も数年前、まさに同じ状態でした。会社員として働きながら、漠然とした不安を抱えていた日々。\n\nそんな私が{theme}と出会い、副業から始めて、フリーランスとして独立するまでの道のりをお話しします。飾らないリアルな体験談なので、きっと参考になるはずです。`,
+    ],
+    recap: [
+      `前回の記事を読んでくださった方、ありがとうございます！\n\nざっくりおさらいすると、{theme}フリーランスのリアルな姿と、「こんな人に向いているよ」というお話をしました。\n\n「よし、自分もやってみよう」と思ってくださった方。今回の記事は、まさにそんなあなたのために書きました。\n\n具体的なステップをお伝えしていくので、「まず何をすればいいの？」という疑問がスッキリ解消されるはずです。\n\nでは、さっそく始めましょう！`,
+    ],
+    practical: [
+      `ここからは実践的な内容に入ります。\n\n{theme}のスキルを確実に身につけるために、私が実際にやった学習法をお伝えしますね。\n\nポイントは「学ぶ→やる→晒す」のサイクル。\n\n「学ぶ」は、教材やYouTubeで知識をインプットすること。1日30分〜1時間でOKです。\n\n「やる」は、学んだことを実際に手を動かして試すこと。見るだけじゃ身につきません。必ずアウトプットしましょう。\n\n「晒す」は、作ったものをSNSで公開すること。「まだ下手だから…」という気持ちは痛いほど分かります。でもね、成長過程を見せることが、実は一番の営業になるんです。\n\n私がSNSで学習記録を発信し始めたのは、まだスキルが全然ない時期。でもそれを見た人から「お仕事お願いできますか？」とDMが来たんです。3ヶ月目のことでした。\n\n完璧じゃなくていい。「頑張っている姿」が人を惹きつけるんです。`,
+    ],
+    tools: [
+      `おすすめのツールと教材をまとめますね。\n\n{theme}を学ぶための環境は、実はそんなにお金をかけなくても整います。\n\n【学習教材（無料〜低コスト）】\n- YouTube：「{theme} 初心者」で検索すると良質な動画がたくさん\n- 書籍：まずは1冊だけ。レビュー評価の高い入門書を選びましょう\n- オンライン講座：Udemyなどのセール時に購入するのがコスパ最強\n\n【作業ツール】\n- タスク管理：Notion or Trello（無料）\n- 時間管理：Toggl Track（無料）\n- ポートフォリオ：自分のSNSアカウントで十分\n\n【案件獲得】\n- クラウドソーシング：まずは登録だけでもしておく\n- SNS：発信の場であり、営業の場でもある\n\n大事なのは「始めること」であって「完璧な環境を作ること」じゃないです。最低限のツールで始めて、必要に応じて追加していけばOK。`,
+    ],
+    monetize: [
+      `案件獲得の具体的な方法をお話しします。\n\n「スキルは身についてきた。でもどうやって仕事をもらうの？」ここが一番の壁ですよね。\n\n私が実際に試した方法を、効果が高かった順にご紹介します。\n\n【1位：SNS経由】\n日頃の発信を見て声をかけてもらえるパターン。単価も比較的高め。信頼関係ができた状態でスタートできるのも◎\n\n【2位：紹介】\n一度お仕事をした方からの紹介。これが増えてくると安定します。「また頼みたい」と思ってもらえる仕事をすることが大前提。\n\n【3位：クラウドソーシング】\n最初の実績作りに最適。単価は低めですが、「受注→納品」の流れを経験できる貴重な場。\n\n最初の3件が一番つらいです。でもそこを超えると、不思議と次の仕事が来るようになります。「実績ゼロ」の壁を越えることが最優先。\n\n提案文のコツは「相手の課題に寄り添うこと」。テンプレをそのまま送るのではなく、「あなたのこの問題を、こうやって解決します」と具体的に書くだけで、通過率が格段に上がります。`,
+    ],
+    levelup: [
+      `独立に向けた準備をまとめます。\n\n{theme}の副業で月5〜10万円を安定して稼げるようになったら、独立を本格的に検討するタイミングです。\n\n【お金の準備】\n- 生活費6ヶ月分の貯金（最低ライン）\n- 国民健康保険への切り替え費用\n- 開業にかかる費用（ほぼゼロでOK）\n\n【手続きの準備】\n- 開業届の提出（税務署に出すだけ。無料）\n- 青色申告承認申請書（節税のため必須）\n- 国民年金・国民健康保険の手続き\n\n【メンタルの準備】\n- 「収入がゼロの月もあり得る」という覚悟\n- 孤独との付き合い方\n- 家族・パートナーとの合意\n\n正直、お金や手続きよりもメンタルの準備が一番大切です。独立すると、良くも悪くもすべて自分次第。その自由さが魅力でもあり、不安の源でもあります。\n\n「100%準備が整ってから」は永遠に来ません。80%で飛び込む勇気が、フリーランスには必要です。`,
+    ],
+    summary: [
+      `いよいよシリーズ最終回です。\n\nここまで読み続けてくださったあなた、本当にありがとうございます。\n\n振り返ると、このシリーズでお伝えしたのは：\n\n第1回：{theme}フリーランスのリアル\n第2回：スキルの身につけ方\n第3回：副業での実績作り\n第4回：独立への準備\n\nそして今回は、すべてを凝縮した保存版をお届けします。\n\n迷ったとき、不安になったとき、この記事に戻ってきてください。あなたの「お守り」になれたら嬉しいです。`,
+    ],
+    checklist: [
+      `フリーランス独立までのチェックリストを作りました。\n\n【学習フェーズ】\n- {theme}の基礎知識を習得した\n- 実際に手を動かしてアウトプットした\n- ポートフォリオに載せられる作品が3つ以上ある\n- SNSで学習記録を発信している\n\n【副業フェーズ】\n- 最初の1件を受注・納品した\n- 月5万円以上の副業収入を3ヶ月連続で達成した\n- リピートしてくれるクライアントがいる\n- 自分の強み・差別化ポイントが明確になった\n\n【独立準備フェーズ】\n- 生活費6ヶ月分の貯金がある\n- 家族・パートナーの理解を得た\n- 開業届の書き方を調べた\n- 退職のタイミングを決めた\n\n全部にチェックが入らなくてもOK。上から順番に、ひとつずつ。あなたのペースで進めていきましょう。`,
+    ],
+    finalMessage: [
+      `最後にひとつだけ伝えさせてください。\n\nフリーランスへの道は、決して楽なものではありません。不安な夜もあるし、「本当にこれでよかったのかな」と思う瞬間もあります。\n\nでも、自分のスキルで、自分の名前で仕事ができる。その喜びは、何にも代えがたいものがあります。\n\n{theme}は、あなたの人生を変える力を持っています。大げさじゃなく、本当にそう思います。\n\nこのシリーズを通じて「よし、やってみよう」と思ってもらえたなら、書いてよかったと心から思います。\n\nあなたの挑戦を、全力で応援しています。\n\n何か分からないことがあれば、いつでもコメント欄で聞いてくださいね。ではまた、どこかで。`,
+    ],
+  },
+  "副業初心者向け": {
+    intro: [
+      `こんにちは！この記事を読んでくださってありがとうございます。\n\n「副業を始めてみたいけど、何から手をつけたらいいか分からない」そんな気持ちでこの記事にたどり着いたのではないでしょうか。\n\n実は私もつい1年前、まったく同じ状態でした。本業のお給料だけでは将来が不安で、でも何をすればいいのか見当もつかなかった。\n\nそんな時に出会ったのが{theme}です。今では毎月安定した副収入を得られるようになりました。この記事では、その道のりを正直にお伝えしますね。`,
+    ],
+    recap: [
+      `前回の記事、読んでくださいましたか？\n\n{theme}副業のリアルな姿をお伝えしました。「意外とできそうかも」と思ってくださった方もいるのではないでしょうか。\n\n今回はさらに踏み込んで、具体的な行動ステップをお伝えします。読み終わったらすぐに動き出せるように書きましたので、ぜひ最後まで読んでくださいね。`,
+    ],
+    practical: [
+      `具体的な方法に入っていきますね。\n\n{theme}を副業にするための最短ルートは「学ぶ→試す→改善する」のサイクルを高速で回すことです。\n\n多くの人が「もっと勉強してから…」と思って、なかなか手を動かせません。気持ちはすごく分かります。でも実際は、70%理解したくらいで手を動かし始めるのがベスト。\n\n実践から得られる学びが、座学の3倍は価値があります。\n\nまずはこれをやってみてください：\n\n1. {theme}の基礎を動画で学ぶ（3日間）\n2. 無料ツールで実際に手を動かす（1週間）\n3. クラウドソーシングで簡単な案件に応募する（2週間目〜）\n\n「え、もう応募するの？」と思いますよね。でも大丈夫。最初の案件は練習だと思ってOK。実際にやることで、「ここが足りない」が見えてきます。\n\nそこからまた学べばいい。この繰り返しが、最速の成長法です。`,
+    ],
+    tools: [
+      `副業に使えるツールを紹介しますね。\n\n{theme}の副業を始めるのに、高額なツールは必要ありません。無料〜月数百円で十分始められます。\n\n【必須ツール】\n- 作業管理：Notion or Googleスプレッドシート（無料）\n- 時間記録：Toggl Track（無料）\n- 請求書作成：Misoca or freee（無料プランあり）\n\n【あると便利】\n- クラウドストレージ：Google Drive（無料で15GB）\n- コミュニケーション：Slack, ChatWork（無料プランあり）\n\n最初から全部揃える必要はありません。まずはGoogleアカウントひとつあれば、大半の作業はカバーできます。\n\n必要なものは、やりながら追加していけば大丈夫。「環境を整えてから始めよう」は、永遠に始まらないパターンです。今あるもので、今日始めましょう。`,
+    ],
+    monetize: [
+      `お金の話をしますね。副業で一番気になるところだと思います。\n\n{theme}副業の収入目安：\n- 1ヶ月目：0〜5,000円（学習期間。焦らない）\n- 2〜3ヶ月目：5,000〜2万円（初案件〜リピート獲得）\n- 4〜6ヶ月目：2万〜5万円（安定期に入る）\n- 半年以降：5万円〜（スキルと効率が上がる）\n\n「思ったより少ない…」と感じましたか？ でもこれ、副業ですからね。本業の収入にプラスして毎月5万円入ってくると、生活はかなり変わります。\n\n年間で60万円。旅行にも行けるし、投資にも回せる。何より「自分で稼げる」という自信がつきます。\n\n収入を伸ばすコツは、最初から高単価を狙わないこと。まず実績を作り、信頼を積み上げ、その上で単価を上げていく。この順番が大切です。`,
+    ],
+    levelup: [
+      `副業を安定させるためのコツをお伝えします。\n\n最初の数件をこなすと、だんだんコツが掴めてきます。ここからが「安定化フェーズ」です。\n\n安定のための3つの戦略：\n\n1.リピーターを作る\n一度お仕事をしたクライアントに「またお願いしたい」と思ってもらえるよう、丁寧な仕事を心がけましょう。納期を守る、レスポンスを早くする。当たり前のことですが、これができるだけで差がつきます。\n\n2.複数の収入源を持つ\nひとりのクライアントに依存すると不安定。3〜5件の案件を並行して進められるのが理想です。\n\n3.スキルを少しずつ広げる\n{theme}の中でも得意分野を増やすと、受けられる案件の幅が広がります。\n\n副業は「走りながら考える」くらいがちょうどいい。完璧な計画を立ててから動くより、まず動いて、途中で軌道修正する方が圧倒的に早いです。`,
+    ],
+    summary: [
+      `シリーズ最終回です。ここまで読んでくださって本当にありがとうございます。\n\n振り返ると：\n第1回：{theme}副業のリアル\n第2回：始め方と学習法\n第3回：案件獲得の方法\n第4回：安定化と税金の基礎\n\nそして今回は、すべてのエッセンスを凝縮した保存版です。\n\n副業で迷ったとき、モチベーションが下がったとき、この記事に戻ってきてください。きっとまた「がんばろう」と思えるはずです。`,
+    ],
+    checklist: [
+      `副業スタートチェックリストをまとめました。\n\n【準備フェーズ】\n- 副業の目的と目標金額を決めた\n- 就業規則を確認した\n- 作業環境を整えた（PC、ネット）\n- クラウドソーシングに登録した\n\n【学習フェーズ】\n- {theme}の基礎を学んだ\n- 実際に手を動かしてアウトプットした\n- ポートフォリオ的な作品が1つ以上ある\n\n【実践フェーズ】\n- 最初の1件に応募した\n- 初案件を納品した\n- 確定申告の基本を理解した\n\n全部にチェックが入らなくてもOK。上から順に、ひとつずつ進めていきましょう。`,
+    ],
+    finalMessage: [
+      `最後に伝えたいことがあります。\n\n副業を始めるのに「最適なタイミング」なんてありません。忙しい時期も、不安な時期も、いつだって「今じゃない気がする」もの。\n\nでも、今この記事を読んでいるあなたは、もう一歩を踏み出しています。\n\n{theme}の副業は、あなたの人生に「もうひとつの選択肢」を与えてくれます。お金だけじゃない。「自分にも稼ぐ力がある」という自信。それが一番の財産です。\n\n一緒にがんばりましょう。応援しています！`,
+    ],
+  },
+  "クリエイター向け": {
+    intro: [
+      `この記事を開いてくれてありがとうございます。\n\nクリエイターとして活動する中で、{theme}についてどう向き合うべきか考えたことはありますか？\n\n正直、最初は私も複雑な気持ちでした。「クリエイターの仕事が奪われるのでは」という不安。でも実際に使ってみて、その考えは大きく変わりました。\n\n{theme}は、使い方を知っている人にとっては最高の味方になります。この記事では、クリエイター目線で{theme}の本当の価値をお伝えします。`,
+    ],
+    recap: [
+      `前回の記事を読んでくださった方、ありがとうございます！\n\n{theme}がクリエイターにとって「脅威」ではなく「ツール」であること、感じていただけたでしょうか。\n\n今回は、さらに具体的な活用法に踏み込んでいきます。実際の制作フローに{theme}をどう組み込むか、リアルなテクニックをお伝えしますね。`,
+    ],
+    practical: [
+      `{theme}を制作に取り入れる具体的な方法をお話しします。\n\nクリエイターにとって一番大切なのは「自分のクリエイティブの核は手放さない」こと。その上で、{theme}にサポートしてもらう部分を見極めるんです。\n\n私が実際に{theme}に任せているのは：\n- リサーチ・情報収集の効率化\n- アイデア出しのブレスト相手\n- 定型的な作業の時短\n- テキスト系コンテンツの下書き\n\n逆に、絶対に自分でやるのは：\n- コンセプトの最終判断\n- デザインの核となるビジュアル\n- クライアントとのコミュニケーション\n- 最終的なクオリティチェック\n\nこの「任せる/やる」の線引きが、{theme}を味方にするコツです。\n\n最初は「どこまで任せていいんだろう」と悩むかもしれません。でも使っていくうちに、自然と自分なりの基準が見えてきますよ。`,
+    ],
+    tools: [
+      `クリエイター向けのおすすめツールを紹介しますね。\n\n{theme}関連のツールは日々進化していて、クリエイター向けに特化したものも増えています。\n\n【制作効率アップ系】\n- アイデア出し・リサーチの効率化ツール\n- 画像・素材の管理ツール\n- タスク管理（Notion, Trello）\n\n【発信・ブランディング系】\n- SNS投稿の効率化ツール\n- アナリティクス（投稿の反応を分析）\n- ポートフォリオ作成ツール\n\n大事なのは「ツールに使われない」こと。あれもこれも導入すると、逆に非効率になります。\n\nまずはひとつだけ試してみて、効果を実感してから次を検討する。このステップが大切です。\n\nクリエイターにとって一番のツールは、あなたの感性とスキル。{theme}はそれを増幅するためのアンプのようなものです。`,
+    ],
+    monetize: [
+      `クリエイターの収益化について、{theme}を絡めたお話をしますね。\n\n「いい作品を作っているのに、なかなか収入が安定しない」というクリエイターは多いです。その原因の多くは「届ける力」の不足にあります。\n\n{theme}を使えば、この「届ける力」を大幅に強化できます。\n\n具体的な収益化モデル：\n\n1. 制作案件（本業）\n→ {theme}で効率化することで、同じ時間でこなせる案件数がアップ\n\n2. コンテンツ販売\n→ noteやBOOTHで、制作プロセスやテクニックを有料コンテンツとして販売\n\n3. 教育・講座\n→ {theme}の活用法を教えるオンライン講座を開催\n\n4. SNSマネタイズ\n→ 発信力を武器に、企業案件やアフィリエイト\n\n「作品を作る」だけが収入源じゃない。{theme}を武器にすることで、クリエイターの収入は多角化できます。`,
+    ],
+    levelup: [
+      `ステップアップの話をしますね。\n\n{theme}を取り入れて制作効率が上がったら、次は「差別化」にフォーカスしましょう。\n\n{theme}を使えるクリエイターは今後増えていきます。その中で選ばれるためには、「あなたにしかない視点」が必要です。\n\nそれは：\n- あなたの経験やバックグラウンドから生まれる独自性\n- 特定のジャンルやスタイルへのこだわり\n- クライアントとの関係性を大切にする姿勢\n\n{theme}が普及するほど、逆に「人間味」や「個性」の価値が上がります。テクノロジーが進化する時代だからこそ、あなたらしさが最大の武器になるんです。\n\n長く活動するために大切なのは、流行に振り回されず自分の軸を持つこと。{theme}はツール。主役は常にあなたです。`,
+    ],
+    summary: [
+      `シリーズ最終回。ここまで読んでくださって、ありがとうございます。\n\n全4回を通じてお伝えしてきたのは：\n第1回：{theme}とクリエイターの関係性\n第2回：制作ワークフローへの組み込み方\n第3回：発信とブランディング\n第4回：収益の多角化\n\n今回は、すべてをまとめた保存版です。\n\n{theme}時代のクリエイター。不安もあるかもしれません。でも、私はクリエイターの未来は明るいと本気で思っています。`,
+    ],
+    checklist: [
+      `クリエイター向け{theme}活用チェックリストです。\n\n【基礎フェーズ】\n- {theme}の基本を理解した\n- 制作に活かせるツールを1つ試した\n- 「任せる/やる」の線引きができた\n\n【実践フェーズ】\n- 制作ワークフローに{theme}を組み込んだ\n- 制作効率が改善された実感がある\n- SNSでの発信に{theme}を活用した\n\n【発展フェーズ】\n- ポートフォリオを{theme}で強化した\n- 新しい収益モデルに挑戦した\n- クリエイターとしての差別化ポイントが明確\n\n全部にチェックが入らなくてOK。あなたのペースで進めてください。`,
+    ],
+    finalMessage: [
+      `最後にひとつだけ。\n\n{theme}がどれだけ進化しても、人の心を動かす創作ができるのは、人間だけです。\n\nあなたの感性、経験、想い。それは{theme}には絶対に真似できない。だから、クリエイターとしての自分に自信を持ってください。\n\n{theme}は、あなたのクリエイティブをさらに輝かせるための道具。上手に使って、もっと自由に、もっと楽しく創作していきましょう。\n\nあなたの作品を楽しみにしています！`,
+    ],
+  },
+  "会社員向け": {
+    intro: [
+      `この記事を開いてくださって、ありがとうございます。\n\n「今の仕事にちょっとマンネリを感じている」「スキルアップしたいけど何から始めれば」「将来のキャリアが不安」\n\nそんな気持ち、ありませんか？ 実は私も、数年前まで同じでした。\n\n毎日同じような業務をこなし、「このままでいいのかな」と漠然と思いながら過ごす日々。転機になったのが{theme}との出会いでした。\n\n学んでみたら、本業の生産性が上がった。社内での評価も変わった。そしてキャリアの選択肢が一気に広がりました。この記事では、その体験をお伝えします。`,
+    ],
+    recap: [
+      `前回の記事を読んでくださった方、ありがとうございます！\n\n{theme}が会社員のキャリアにもたらすインパクト、感じていただけたでしょうか。\n\n今回はより実践的に、「じゃあ具体的にどう学んで、どう使うの？」という部分を掘り下げます。忙しい会社員でも無理なく実践できる方法を厳選してお伝えしますね。`,
+    ],
+    practical: [
+      `では具体的な活用法に入りますね。\n\n{theme}を本業に活かす一番簡単な方法は、「今やっている業務の中で使ってみる」こと。\n\n例えば：\n- 会議の議事録作成の効率化\n- リサーチ業務のスピードアップ\n- 企画書やプレゼン資料のクオリティ向上\n- メール文面のブラッシュアップ\n\nどれも、今日からすぐにできることです。\n\n私が最初にやったのは、会議メモの効率化でした。たったそれだけで、週に2時間ほど作業時間が浮いたんです。空いた時間を企画業務に充てたら、上司から「最近アウトプット増えたね」と言われました。\n\nポイントは「大きく変えようとしない」こと。日常業務の小さな一部分に{theme}を取り入れるだけで、確実に変化が生まれます。\n\nまずは今日の業務リストを見て、「これ、{theme}使えるかも」と思うものをひとつ見つけてみてください。`,
+    ],
+    tools: [
+      `会社員におすすめの学習リソースをまとめますね。\n\n忙しい会社員に大切なのは「効率的に学べる手段」を選ぶこと。\n\n【すきま時間で学べるもの】\n- YouTube：{theme}の入門動画（通勤時間に最適）\n- ポッドキャスト：ながら聴きで情報収集\n- X / note：最新トレンドのキャッチアップ\n\n【しっかり学びたい時】\n- 書籍：体系的に学べる。まずは入門書1冊\n- Udemy：セール時なら1,500円〜で質の高い講座が受けられる\n- 社内研修：会社が提供しているなら活用しない手はない\n\n一番のおすすめは「通勤×YouTube or ポッドキャスト」の組み合わせ。毎日の通勤時間が学習時間に変わるので、追加の時間を確保する必要がありません。\n\n1ヶ月続ければ、{theme}の基本はほぼ理解できます。あとは実践あるのみ。`,
+    ],
+    monetize: [
+      `{theme}スキルのキャリアへの活かし方をお話しします。\n\n会社員にとって{theme}スキルは、3つの方向に活かせます。\n\n1. 社内昇進\n{theme}を使って業務効率を改善した実績は、評価面談や昇進の際のアピール材料になります。「{theme}を活用して○○の業務時間を30%削減しました」と数字で語れるのが強い。\n\n2. 転職\n{theme}スキルを持つ人材の需要は右肩上がり。転職市場での価値が確実に上がります。職務経歴書に「{theme}を活用した業務改善経験」があると、書類通過率が変わります。\n\n3. 副業\n会社によりますが、{theme}スキルを活かした副業も選択肢のひとつ。まずは小さく始めて、本業との相乗効果を狙いましょう。\n\nどの道を選ぶかは自分次第。大切なのは「選択肢を持っている」という安心感です。{theme}を学ぶことで、その選択肢が確実に増えます。`,
+    ],
+    levelup: [
+      `さらなるステップアップに向けた戦略をお伝えします。\n\n{theme}の基本を身につけたら、次は「社内での影響力を広げる」フェーズです。\n\n具体的には：\n\n1. 社内勉強会の開催\n自分が学んだことを共有する場を作りましょう。「○○さんは{theme}に詳しい」という認知が広がると、相談される機会が増え、社内での存在感が高まります。\n\n2. 業務改善提案\n{theme}を使った改善アイデアを上司に提案する。具体的な効果試算もつけると説得力が増します。「やってみていいですか？」と聞けるのがベスト。\n\n3. 社外への発信\nnoteやSNSで{theme}×業務改善の知見を発信すると、社外からの評価にもつながります。これが転職や副業の道を自然に開いてくれます。\n\n「ただの会社員」から「{theme}に強い会社員」へ。この変化が、あなたのキャリアに大きな違いを生みます。`,
+    ],
+    summary: [
+      `シリーズ最終回です。ここまで読み続けてくださって、本当にありがとうございます。\n\n全4回を振り返ると：\n第1回：なぜ会社員に{theme}が必要か\n第2回：効率的な学習法\n第3回：本業への活かし方\n第4回：キャリア戦略\n\n今回はすべてを凝縮した保存版。迷ったときの「辞書」として使ってください。`,
+    ],
+    checklist: [
+      `会社員のための{theme}チェックリストです。\n\n【学習フェーズ】\n- {theme}の基本概念を理解した\n- 通勤時間で学習する習慣ができた\n- 実際に手を動かしてアウトプットした\n\n【実践フェーズ】\n- 日常業務に{theme}を1つ取り入れた\n- 業務効率の改善を実感できた\n- 学んだことをチーム内で共有した\n\n【キャリアフェーズ】\n- 評価面談で{theme}活用の実績をアピールした\n- 職務経歴書に{theme}スキルを追記した\n- 今後のキャリアプランを見直した\n\nひとつずつ、あなたのペースで進めていきましょう。`,
+    ],
+    finalMessage: [
+      `最後に一言。\n\n「学び続ける会社員」は、最強です。\n\n周りが変わらない中で、自分だけが成長し続ける。それだけで、1年後には大きな差になります。\n\n{theme}は、あなたのキャリアを加速させるツールです。でも、一番大切なのはツールじゃなく、「学ぼう」と思ったあなた自身の意志。\n\nこのシリーズが、あなたのキャリアアップの一助になれば幸いです。応援しています！`,
+    ],
+  },
+};
+
+function writeSeriesArticle(index) {
+  const article = generatedSeriesArticles[index];
+  if (!article) return;
+
+  hideAllViews();
+  const loading = document.getElementById('loading');
+  document.getElementById('loadingText').textContent = `第${index + 1}回の記事を執筆しています...`;
+  loading.classList.add('show');
+
+  setTimeout(() => {
+    const { title, headings, audience, theme, isFree, isFinal, episodeLabel, price } = article;
+    const pool = seriesBodyPool[audience];
+
+    let bodyHtml = '';
+    let plainText = `${episodeLabel}（${price}）\n${title}\n\n`;
+
+    // Determine paywall position for free article
+    const paywallIdx = isFree ? headings.findIndex(h => h.includes('無料パート')) : -1;
+    let paywallInserted = false;
+
+    headings.forEach((heading, idx) => {
+      // Insert paywall divider for free article
+      if (isFree && !paywallInserted && paywallIdx >= 0 && idx > paywallIdx) {
+        paywallInserted = true;
+        bodyHtml += `
+          <div class="paywall-divider">
+            <div class="lock">&#x1F512;</div>
+            <p>ここから先は有料パートです</p>
+            <div class="note">（noteでは「ここから有料」ラインを設定できます）</div>
+          </div>`;
+        plainText += '\n---（ここから有料）---\n\n';
+      }
+
+      // Select body text by heading context
+      let body;
+      const h = heading.toLowerCase();
+
+      if (idx === 0) {
+        // First heading: intro or recap
+        if (h.includes('前回') || h.includes('振り返') || h.includes('おさらい') || h.includes('おさらい')) {
+          body = pick1(pool.recap || pool.intro);
+        } else if (isFinal) {
+          body = pick1(pool.summary || pool.intro);
+        } else {
+          body = pick1(pool.intro);
+        }
+      } else if (idx === headings.length - 1) {
+        // Last heading
+        if (h.includes('次回') || h.includes('予告') || h.includes('案内') || h.includes('紹介')) {
+          body = pick1(pool.finalMessage || pool.recap);
+        } else {
+          body = pick1(pool.finalMessage);
+        }
+      } else if (h.includes('チェックリスト') || h.includes('保存版') || h.includes('ロードマップ') || h.includes('まとめ') || h.includes('総まとめ')) {
+        body = pick1(pool.checklist || pool.practical);
+      } else if (h.includes('ツール') || h.includes('サービス') || h.includes('教材') || h.includes('環境') || h.includes('リソース') || h.includes('選定')) {
+        body = pick1(pool.tools || pool.practical);
+      } else if (h.includes('収益') || h.includes('案件') || h.includes('稼') || h.includes('お金') || h.includes('提案') || h.includes('営業') || h.includes('roi') || h.includes('ROI') || h.includes('投資') || h.includes('試算')) {
+        body = pick1(pool.monetize || pool.practical);
+      } else if (h.includes('ステップアップ') || h.includes('単価') || h.includes('成長') || h.includes('差別化') || h.includes('改善') || h.includes('pdca') || h.includes('PDCA') || h.includes('独立') || h.includes('退職') || h.includes('準備') || h.includes('手続') || h.includes('資金')) {
+        body = pick1(pool.levelup || pool.practical);
+      } else if (h.includes('特別') || h.includes('付録') || h.includes('テンプレート') || h.includes('限定') || h.includes('q&a') || h.includes('Q&A') || h.includes('質問')) {
+        body = pick1(pool.checklist || pool.practical);
+      } else if (h.includes('成功') || h.includes('エピソード') || h.includes('事例') || h.includes('メッセージ') || h.includes('おわり') || h.includes('最後')) {
+        body = pick1(pool.finalMessage);
+      } else {
+        body = pick1(pool.practical);
+      }
+
+      body = T(body, theme);
+
+      bodyHtml += `
+        <div class="article-section">
+          <h3>${heading}</h3>
+          <div class="body-text">${body}</div>
+        </div>`;
+      plainText += `## ${heading}\n\n${body}\n\n`;
+    });
+
+    document.getElementById('seriesArticleViewTitle').textContent = title;
+    document.getElementById('seriesArticleViewBody').innerHTML = bodyHtml;
+    document.getElementById('seriesArticleView').dataset.plainText = plainText;
+
+    loading.classList.remove('show');
+    document.getElementById('seriesArticleView').classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 2000);
+}
+
+function backToSeriesResults() {
+  document.getElementById('seriesArticleView').classList.remove('show');
+  document.getElementById('seriesResults').classList.add('show');
+  document.getElementById('seriesResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function copySeriesArticle() {
+  const text = document.getElementById('seriesArticleView').dataset.plainText;
+  navigator.clipboard.writeText(text).then(() => showToast());
+}
+
+// Enter key
+document.getElementById('theme').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleGenerate();
+});
+</script>
+</body>
+</html>
